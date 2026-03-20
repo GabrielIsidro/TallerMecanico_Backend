@@ -6,6 +6,11 @@ import lombok.ToString;
 
 import java.util.List; // Importa la clase List para manejar colecciones de objetos
 
+/**
+ * Clase que representa un cliente en el taller mecánico.
+ * Contiene información sobre el nombre, apellido, email, teléfono y dirección del cliente.
+ * También tiene una relación de uno a muchos con la entidad Vehiculo.
+ */
 @Entity // Anotación que le dice a Spring que esta clase es una entidad JPA
 @Table(name = "clientes") // Anotación que especifica el nombre de la tabla en la base de datos
 @Data // Anotación de Lombok que genera automáticamente getters, setters, toString, equals y hashCode

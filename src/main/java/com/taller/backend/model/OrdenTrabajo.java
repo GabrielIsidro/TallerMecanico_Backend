@@ -10,6 +10,15 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.ArrayList;
 
+/**
+ * Clase que representa una orden de trabajo en el taller mecánico.
+ * Una orden de trabajo contiene información sobre el vehículo, la fecha de ingreso, la descripción del trabajo a realizar, el estado de la orden, los items asociados (servicios y repuestos) y el costo total calculado a partir de esos items.
+ * La relación con Vehiculo es ManyToOne, ya que un vehículo puede tener múltiples órdenes de trabajo, pero cada orden pertenece a un solo vehículo.
+ * La relación con ItemOrden es OneToMany, ya que una orden de trabajo puede tener múltiples items, pero cada item pertenece a una sola orden.
+ * El campo costoTotal se actualiza automáticamente cada vez que se agrega o modifica un item en la orden, asegurando que siempre refleje el costo correcto de la orden de trabajo.
+ * El campo fechaIngreso se establece automáticamente al crear una nueva orden de trabajo, pero también se puede modificar si es necesario.
+ * El campo estado utiliza un enum para representar los diferentes estados que puede tener una orden de trabajo (PENDIENTE, EN_PROGRESO, COMPLETADA, CANCELADA), lo que facilita la gestión del flujo de trabajo en el taller.
+ */
 @Entity
 @Table(name = "ordenes_trabajo")
 @Data
@@ -41,7 +50,9 @@ public class OrdenTrabajo {
     @JsonIgnoreProperties("orden") // Para evitar la referencia circular al serializar a JSON
     private List<ItemOrden> items = new ArrayList<>();
 
-    //Antes de guardar en la BD, poner la fecha actual si esta vacia
+    /**
+     * Método que se ejecuta antes de guardar o actualizar la orden de trabajo.
+     */
     @PrePersist
     @PreUpdate
     public void prePersist() {
@@ -51,13 +62,19 @@ public class OrdenTrabajo {
         this.costoTotal = getTotal(); // Actualiza el costo total antes de guardar o actualizar la orden
     }
 
-    //Metodo helper para agregar item facilmente y calcular el total
+    /**
+     * Método para agregar un item a la orden de trabajo.
+     * @param item El item a agregar.
+     */
     public void agregarItem(ItemOrden item) {
         items.add(item);
         item.setOrden(this); // Establece la relación bidireccional
     }
 
-    //Metodo para calcular el TOTAL FINAL de toda la orden
+    /**
+     * Método para obtener el costo total de la orden de trabajo.
+     * @return El costo total de la orden.
+     */
     public Double getTotal() {
         double total = 0.0;
         for (ItemOrden item : items){
