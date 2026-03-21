@@ -5,6 +5,8 @@ import com.taller.backend.model.OrdenTrabajo;
 // import com.taller.backend.model.OrdenTrabajo;
 import com.taller.backend.service.OrdenTrabajoService;
 import com.taller.backend.model.EstadoOrden;
+import com.taller.backend.model.FormaPago;
+
 // import org.springframework.beans.factory.annotation.Autowire;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -19,8 +21,7 @@ Controlador para gestionar las operaciones relacionadas con las órdenes de trab
 
 @RestController 
 @RequestMapping("/api/ordenes") //La ruta base para este controlador
-@CrossOrigin(origins = "*") //Permite solicitudes desde cualquier origen (útil para desarrollo)
-public class OrdenTrabajoController {
+@CrossOrigin(origins = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PATCH, RequestMethod.PUT, RequestMethod.DELETE})public class OrdenTrabajoController {
 
     //Inyección de dependencia para el servicio de ordenes de trabajo
     @Autowired
@@ -83,5 +84,13 @@ public class OrdenTrabajoController {
         private Long vehiculoId;
         private String descripcion;
         private List<ItemOrden> items;
+    }
+
+    /*
+    Endpoint para cambiar la forma de pago de una orden
+     */
+    @PatchMapping("/{id}/pago")
+    public OrdenTrabajo cambiarPago(@PathVariable Long id, @RequestParam FormaPago formaPago){
+        return ordenService.actualizarPago(id, formaPago);
     }
 }

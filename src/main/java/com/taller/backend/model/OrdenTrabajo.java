@@ -39,6 +39,9 @@ public class OrdenTrabajo {
     @Enumerated(EnumType.STRING) // Guarda el nombre del estado en la BD
     private EstadoOrden estado; // Estado de la orden de trabajo, usando el enum EstadoOrden
 
+    @Enumerated(EnumType.STRING) 
+    private FormaPago formaPago;
+
     //RELACION: Una orden pertece a un Vehiculo
     @ManyToOne
     @JoinColumn(name = "vehiculo_id") // Nombre de la columna que se usará como clave foránea en la tabla ordenes_trabajo

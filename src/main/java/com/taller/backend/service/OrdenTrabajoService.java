@@ -1,10 +1,6 @@
 package com.taller.backend.service;
 
 import com.taller.backend.model.*;
-import com.taller.backend.model.EstadoOrden;
-import com.taller.backend.model.ItemOrden;
-import com.taller.backend.model.OrdenTrabajo;
-import com.taller.backend.model.Vehiculo;
 import com.taller.backend.repository.OrdenTrabajoRepository;
 import com.taller.backend.repository.VehiculoRepository;
 import com.taller.backend.repository.TipoServicioRepository;
@@ -84,6 +80,13 @@ public class OrdenTrabajoService {
         return ordenRepository.save(orden);
     }
 
+    public OrdenTrabajo actualizarPago(Long id, FormaPago formaPago) {
+        OrdenTrabajo orden = ordenRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Orden no encontrada"));
+        orden.setFormaPago(formaPago);
+        return ordenRepository.save(orden);
+    }
+    
     //Metodo para obtener las ordenes de trabajo por el id del vehiculo
     public List<OrdenTrabajo> obtenerPorVehiculo(Long vehiculoId) {
         return ordenRepository.findByVehiculoId(vehiculoId);
