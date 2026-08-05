@@ -1,65 +1,81 @@
 package com.taller.backend.controller;
 
-import com.taller.backend.repository.VehiculoRepository; // El repositorio que maneja la interacción con la base de datos para la entidad Vehiculo
-import com.taller.backend.model.Vehiculo; // La clase Vehiculo que representa la entidad de tu base de datos
-import com.taller.backend.service.VehiculoService; // El servicio que contiene la lógica de negocio para manejar los Vehiculo, como obtenerlos, guardarlos, actualizarlos y eliminarlos
-import org.springframework.beans.factory.annotation.Autowired; // Anotación que le dice a Spring que inyecte automáticamente una instancia de VehiculoService
-import org.springframework.web.bind.annotation.*; // Importa las anotaciones de Spring MVC para definir el controlador, las rutas y los métodos HTTP, como @RestController, @RequestMapping, @GetMapping, @PostMapping, @PutMapping y @DeleteMapping
+import com.taller.backend.model.Taller;
+import com.taller.backend.model.Usuario;
+import com.taller.backend.model.Vehiculo;
+import com.taller.backend.repository.UsuarioRepository;
+import com.taller.backend.repository.VehiculoRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.List; // Importa la clase List para manejar colecciones de Vehiculo
-import java.util.Optional; // Importa la clase Optional para manejar valores que pueden ser nulos, como cuando buscas un Vehiculo por ID y no lo encuentras
+import java.util.List;
 
-@RestController // Anotación que combina las dos anteriores
-@RequestMapping("/api/vehiculos") //La ruta base para este controlador
-@CrossOrigin(origins = "*") //Permite solicitudes desde cualquier origen (útil para desarrollo)
+@RestController
+@RequestMapping("/api/vehiculos")
+@CrossOrigin(origins = "*")
+public class VehiculoController {
 
-public class VehiculoController { // Clase que maneja las solicitudes HTTP relacionadas con los Vehiculo, como obtenerlos, guardarlos, actualizarlos y eliminarlos
-    
-    @Autowired // Anotación que le dice a Spring que inyecte automáticamente una instancia de VehiculoService
-    private VehiculoService vehiculoService; // El servicio que contiene la lógica de negocio para manejar los Vehiculo, como obtenerlos, guardarlos, actualizarlos y eliminarlos
+    @Autowired
+    private VehiculoRepository vehiculoRepository;
 
-    @Autowired // Anotación que le dice a Spring que inyecte automáticamente una instancia de VehiculoRepository
-    private VehiculoRepository vehiculoRepository; // El repositorio que maneja la interacción con la base de datos para la entidad Vehiculo
+    // ---> 1. Traemos la base de usuarios
+    @Autowired
+    private UsuarioRepository usuarioRepository;
 
-    // Obtener: http://localhost:8080/api/vehiculos
+    // ---> 2. Función para descubrir de qué taller es la persona que hizo clic
+    private Taller getTallerAutenticado() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        return usuario.getTaller();
+    }
+
     @GetMapping
-    public List<Vehiculo> getAll() { 
-        return vehiculoService.getAllVehiculos(); // Llama al método getAllVehiculos() del servicio para obtener una lista de todos los Vehiculo en la base de datos
+    public List<Vehiculo> obtenerVehiculos() {
+        // ---> 3. Traemos solo la flota de SU taller
+        Taller miTaller = getTallerAutenticado();
+        return vehiculoRepository.findByTaller(miTaller);
     }
 
-    // Obtener: http://localhost:8080/api/vehiculos/1
-    @GetMapping("/{id}")
-    public Optional<Vehiculo> getById(@PathVariable Long id) {
-        return vehiculoService.getVehiculoById(id); // Llama al método getVehiculoById() del servicio para obtener un Vehiculo por su ID
-    }
-
-    // Crear: http://localhost:8080/api/vehiculos
     @PostMapping
-    public Vehiculo create(@RequestBody Vehiculo vehiculo) {
-        return vehiculoService.saveVehiculo(vehiculo); // Llama al método saveVehiculo() del servicio para guardar un Vehiculo en la base de datos
+    public Vehiculo crearVehiculo(@RequestBody Vehiculo vehiculo) {
+        // ---> 4. Le estampamos la marca de agua de SU taller al auto nuevo
+        vehiculo.setTaller(getTallerAutenticado());
+        return vehiculoRepository.save(vehiculo);
     }
 
-    // Actualizar: http://localhost:8080/api/vehiculos/1
     @PutMapping("/{id}")
-    public Vehiculo update(@PathVariable Long id, @RequestBody Vehiculo vehiculoDetalles) {
-        Vehiculo vehiculo = vehiculoRepository.findById(id).orElseThrow(() -> new RuntimeException("Vehiculo no encontrado con id: " + id)); // Busca el Vehiculo por su ID, si no lo encuentra lanza una excepción
-        vehiculo.setMarca(vehiculoDetalles.getMarca());
-        vehiculo.setModelo(vehiculoDetalles.getModelo());
-        vehiculo.setAnio(vehiculoDetalles.getAnio());
-        vehiculo.setPatente(vehiculoDetalles.getPatente());
-        vehiculo.setCategoria(vehiculoDetalles.getCategoria());
-        vehiculo.setCliente(vehiculoDetalles.getCliente());
-        vehiculo.setNumeroChasis(vehiculoDetalles.getNumeroChasis());
-        vehiculo.setNumeroMotor(vehiculoDetalles.getNumeroMotor());
-        vehiculo.setKilometraje(vehiculoDetalles.getKilometraje());
-        vehiculo.setProximoServiceKm(vehiculoDetalles.getProximoServiceKm());
-        
-        return vehiculoService.saveVehiculo(vehiculo); // Llama al método saveVehiculo() del servicio para actualizar un Vehiculo en la base de datos
+    public ResponseEntity<Vehiculo> actualizarVehiculo(@PathVariable Long id, @RequestBody Vehiculo detallesVehiculo) {
+        return vehiculoRepository.findById(id).map(vehiculo -> {
+            if (!vehiculo.getTaller().getId().equals(getTallerAutenticado().getId())) {
+                throw new RuntimeException("Acceso denegado: El recurso no pertenece a tu taller.");
+            }
+            vehiculo.setPatente(detallesVehiculo.getPatente());
+            vehiculo.setModelo(detallesVehiculo.getModelo());
+            vehiculo.setMarca(detallesVehiculo.getMarca());
+            vehiculo.setAnio(detallesVehiculo.getAnio());
+            vehiculo.setCategoria(detallesVehiculo.getCategoria());
+            vehiculo.setNumeroMotor(detallesVehiculo.getNumeroMotor());
+            vehiculo.setNumeroChasis(detallesVehiculo.getNumeroChasis());
+            vehiculo.setKilometraje(detallesVehiculo.getKilometraje());
+            vehiculo.setProximoServiceKm(detallesVehiculo.getProximoServiceKm());
+            vehiculo.setCliente(detallesVehiculo.getCliente());
+            // No tocamos el Taller, mantenemos el original
+            
+            return ResponseEntity.ok(vehiculoRepository.save(vehiculo));
+        }).orElse(ResponseEntity.notFound().build());
     }
 
-    // Eliminar: http://localhost:8080/api/vehiculos/1
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
-        vehiculoService.deleteVehiculo(id); // Llama al método deleteVehiculo() del servicio para eliminar un Vehiculo de la base de datos
+    public ResponseEntity<?> eliminarVehiculo(@PathVariable Long id) {
+        return vehiculoRepository.findById(id).map(vehiculo -> {
+            if (!vehiculo.getTaller().getId().equals(getTallerAutenticado().getId())) {
+                throw new RuntimeException("Acceso denegado: El recurso no pertenece a tu taller.");
+            }
+            vehiculoRepository.delete(vehiculo);
+            return ResponseEntity.ok().build();
+        }).orElse(ResponseEntity.notFound().build());
     }
 }

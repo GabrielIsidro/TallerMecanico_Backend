@@ -25,4 +25,8 @@ public class TipoServicio {
     private Double precioB; // Precio para categoría B
     private Double precioC; // Precio para categoría C
 
+    @ManyToOne
+    @JoinColumn(name = "taller_id")
+    private Taller taller;
+
 }

@@ -43,4 +43,12 @@ public class Vehiculo { // Clase que representa la entidad Vehiculo en la base d
     // Esto le dice a Java: "Si borras este auto, llévate todas sus órdenes con él"
     @OneToMany(mappedBy = "vehiculo", cascade = CascadeType.REMOVE)
     private List<OrdenTrabajo> ordenes;
+
+    // Muchos vehículos están registrados en un taller
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "taller_id")
+    private Taller taller;
+
+    public Taller getTaller() { return taller; }
+    public void setTaller(Taller taller) { this.taller = taller; }
 }

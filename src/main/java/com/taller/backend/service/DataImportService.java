@@ -2,6 +2,7 @@ package com.taller.backend.service;
 
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
+import com.taller.backend.model.Taller;
 import com.taller.backend.model.TipoServicio;
 import com.taller.backend.repository.TipoServicioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,7 +14,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List; // Descomenté esta importación porque la vamos a usar
+import java.util.List;
 
 /*
  * Servicio para importar datos masivos desde un archivo CSV. 
@@ -31,7 +32,8 @@ public class DataImportService {
      * Ejemplo:
      * FRENOS,Revisión de frenos,$1000,$1200,$1500
      */
-    public String importarPrecios(MultipartFile file) throws IOException, CsvValidationException {
+    // ---> CAMBIO: Ahora recibe el Taller como parámetro extra
+    public String importarPrecios(MultipartFile file, Taller taller) throws IOException, CsvValidationException {
         
         // 1. Validación básica para no procesar la nada misma
         if (file.isEmpty()){
@@ -71,6 +73,9 @@ public class DataImportService {
                 servicio.setPrecioA(parsearPrecio(fila[2]));
                 servicio.setPrecioB(parsearPrecio(fila[3]));
                 servicio.setPrecioC(parsearPrecio(fila[4]));
+
+                // ---> CAMBIO: Le estampamos la marca de agua del taller al precio
+                servicio.setTaller(taller);
 
                 // Agregamos a la lista en lugar de guardar directamente en la BD
                 serviciosNuevos.add(servicio);

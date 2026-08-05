@@ -1,89 +1,141 @@
-# 🔧 Backend - Sistema de Gestión de Taller Mecánico
+<div align="center">
+  <h1>🔧 TallerMecanico_Backend</h1>
+  <p><em>Sistema Integral de Gestión para Talleres Mecánicos</em></p>
+</div>
 
-Este repositorio contiene el código fuente del backend para un sistema integral de gestión de talleres mecánicos. El proyecto nace de una necesidad real: optimizar y digitalizar la administración de un taller familiar especializado en autos, camiones y camionetas.
-📖 Idea de Negocio y Propósito
+---
 
-  > El objetivo principal de esta aplicación es resolver los problemas organizativos típicos de un taller mecánico en crecimiento. Actualmente, la gestión manual o en papel dificulta el seguimiento de los trabajos y el control de los clientes.
+## 📖 Sobre el Proyecto
 
-### Este sistema permite:
+El proyecto nace de una necesidad real: optimizar y digitalizar la administración de un taller mecánico familiar especializado en autos, camiones y camionetas. 
+Este backend provee una **API REST** robusta y segura que resuelve los problemas organizativos típicos de un taller en crecimiento, reemplazando la gestión manual o en papel por un sistema digital centralizado.
 
-  > Gestión de Vehículos: Registro detallado de unidades de diferente porte (autos, utilitarios, camiones).
+---
 
-  > Historial de Reparaciones: Seguimiento de los servicios realizados a cada vehículo para un mejor mantenimiento preventivo.
+## ⚙️ Características Principales
 
-  > Administración de Clientes: Base de datos de dueños y empresas.
+- 🚗 **Gestión de Vehículos**: Registro detallado de unidades de diferente porte (autos, utilitarios, camiones).
+- 📜 **Historial de Reparaciones**: Seguimiento integral de los servicios realizados a cada vehículo, facilitando el mantenimiento preventivo.
+- 👥 **Administración de Clientes**: Base de datos de dueños y empresas.
+- 📋 **Control de Órdenes de Trabajo**: Trazabilidad del estado de las reparaciones (Pendiente, En Proceso, Terminado, Entregado).
+- 🔒 **Seguridad y Autenticación**: Sistema seguro basado en tokens JWT (JSON Web Tokens) y roles de usuario.
+- ✉️ **Notificaciones por Correo**: Integración con un servidor SMTP (Gmail) para enviar alertas y comunicaciones.
+- 📊 **Importación de Datos**: Soporte para la lectura de archivos CSV e ingesta inicial de información.
+- 💳 **Suscripciones y Pagos**: Integración con la pasarela de pagos Mercado Pago para gestionar planes de suscripción del modelo SaaS.
+- 🏢 **Multi-Taller (SaaS)**: Soporte para la administración de múltiples talleres mecánicos desde una misma plataforma centralizada.
 
-  > Control de Órdenes de Trabajo: Estado de las reparaciones (Pendiente, En Proceso, Terminado, Entregado).
+---
 
 ## 🏗️ Arquitectura del Sistema
 
-El proyecto sigue una Arquitectura en Capas (Layered Architecture) para asegurar la separación de responsabilidades, la escalabilidad y facilitar el mantenimiento del código.
+El proyecto está diseñado bajo una **Arquitectura en Capas (Layered Architecture)**, asegurando la separación de responsabilidades, alta escalabilidad y facilidad de mantenimiento:
 
-El flujo de datos se estructura de la siguiente manera:
+1. **Controllers (`/controller`)**: Exponen los endpoints de la API REST y manejan las peticiones HTTP.
+2. **Services (`/service`)**: Contienen la lógica de negocio pura, reglas del taller y cálculos.
+3. **Repositories (`/repository`)**: Interfaces de Spring Data JPA para la persistencia y acceso a datos.
+4. **Models (`/model`)**: Entidades que mapean directamente las tablas en la base de datos (Ej: `Vehiculo`, `Cliente`, `OrdenTrabajo`).
+5. **DTOs (`/dto`)**: Objetos de Transferencia de Datos utilizados para desacoplar las entidades de la base de datos de las respuestas y peticiones de la API.
+6. **Security (`/security`)**: Filtros y utilidades para la autenticación y autorización mediante JWT.
 
-  > Controller Layer (Controladores): Maneja las peticiones HTTP (REST API) y define los endpoints de entrada.
+---
 
-  > Service Layer (Servicios): Contiene la lógica de negocio pura (validaciones, cálculos, reglas del taller).
+## 🛠️ Tecnologías Utilizadas
 
-  > Repository/Data Access Layer (Persistencia): Se encarga de la comunicación con la base de datos.
+### Core & Frameworks
+- **Java 17+**
+- **Spring Boot 4.0.3**
+- **Spring Data JPA** (Persistencia)
+- **Spring Web / WebMVC** (API REST)
+- **Spring Security** (Protección de endpoints)
 
-  > Model/Domain Layer (Entidades): Representa los objetos del negocio (Vehículo, Cliente, Orden, Repuesto).
-
-## 🚀 Tecnologías Utilizadas
-### Lenguajes y Frameworks
-
-  >  Lenguaje: [Java 25]
-
-  > Framework: [Spring Boot 3 / Spring Data JPA / Spring Web]
-
-  > Gestión de Dependencias: [Maven]
+### Herramientas de Apoyo
+- **Lombok**: Para reducir el código repetitivo (getters, setters, constructores).
+- **JJWT (io.jsonwebtoken)**: Para la generación y validación de tokens.
+- **OpenCSV**: Para el procesamiento de archivos `.csv`.
+- **JavaMail Sender**: Para el envío de correos electrónicos.
+- **MercadoPago SDK / API**: Para procesar pagos y gestionar suscripciones.
 
 ### Base de Datos
+- **MySQL** 
+- **Hibernate** (ORM)
 
-  > Motor:  [MySQL]
+---
 
-  > ORM: [Hibernate / JPA] para el mapeo objeto-relacional.
+## 🚀 Instalación y Ejecución
 
-### Herramientas y Utilidades
+### Prerrequisitos
+- **Java 17** (o superior) instalado en tu sistema.
+- **MySQL Server** en ejecución.
+- (Opcional) Un IDE como IntelliJ IDEA, Eclipse o VS Code.
 
-  > Control de Versiones: Git & GitHub.
+### Pasos para levantar el entorno local
 
-  > Pruebas (Testing): [Postman].
+1. **Clonar el repositorio:**
+   ```bash
+   git clone https://github.com/tu-usuario/taller-mecanico-backend.git
+   cd TallerMecanico_Backend
+   ```
 
-## 🔌 Endpoints Principales (API REST)
+2. **Configurar la Base de Datos:**
+   Crea una base de datos en MySQL llamada `taller_db`:
+   ```sql
+   CREATE DATABASE taller_db;
+   ```
+   *Nota: Por defecto, Hibernate (configurado con `update`) creará todas las tablas automáticamente al iniciar la aplicación.*
 
-A continuación se describen algunos de los recursos disponibles en la API:
+3. **Configurar Propiedades (Credenciales):**
+   Edita el archivo `src/main/resources/application.properties` con tu usuario y contraseña de MySQL, y tus credenciales de Gmail para el envío de correos.
+
+4. **Compilar e Instalar dependencias:**
+   Ejecuta el Wrapper de Maven (incluido en el proyecto):
+   ```bash
+   # En Windows
+   .\mvnw.cmd clean install -DskipTests
+   
+   # En Linux/Mac
+   ./mvnw clean install -DskipTests
+   ```
+
+5. **Ejecutar el Servidor:**
+   ```bash
+   # En Windows
+   .\mvnw.cmd spring-boot:run
+   
+   # En Linux/Mac
+   ./mvnw spring-boot:run
+   ```
+   La API estará disponible en: `http://localhost:8080/`
+
+---
+
+## 🔌 Endpoints Principales
+
+Aquí se detallan algunos de los recursos clave de la API. Para acceder a la mayoría, es necesario adjuntar el token JWT en la cabecera `Authorization: Bearer <token>`.
+
 | Método | Endpoint | Descripción |
 | :--- | :--- | :--- |
-| `GET` | `/api/clientes` | Listar todos los clientes. |
-| `POST` | `/api/vehiculos` | Registrar un nuevo auto o camión. |
-| `GET` | `/api/vehiculos/{id}/historial` | Ver reparaciones pasadas de un vehículo. |
-| `POST` | `/api/ordenes` | Crear una nueva orden de trabajo. |
-| `PUT` | `/api/ordenes/{id}/estado` | Actualizar el estado de una reparación. |
+| `POST` | `/api/auth/login` | Autenticar usuario y recibir JWT |
+| `GET` | `/api/clientes` | Listar todos los clientes registrados |
+| `POST` | `/api/vehiculos` | Registrar un nuevo auto, camión o utilitario |
+| `GET` | `/api/vehiculos/{id}/historial` | Obtener el historial de reparaciones de un vehículo |
+| `POST` | `/api/ordenes` | Crear una nueva orden de trabajo |
+| `PUT` | `/api/ordenes/{id}/estado` | Actualizar el estado de una orden |
 
-## 🛠️ Instalación y Configuración
+---
 
-### Sigue estos pasos para correr el proyecto en tu entorno local:
+## 👥 Contribución y Soporte
 
->   Clonar el repositorio:
+Este es un proyecto personal con fines académicos y de implementación real.
+Si deseas sugerir mejoras, detectar errores o contribuir al desarrollo:
+1. Realiza un Fork del proyecto.
+2. Crea una rama para tu feature (`git checkout -b feature/NuevaFuncionalidad`).
+3. Haz un commit de tus cambios (`git commit -m 'Agrega nueva funcionalidad'`).
+4. Sube la rama (`git push origin feature/NuevaFuncionalidad`).
+5. Abre un Pull Request.
 
-    git clone https://github.com/tu-usuario/taller-mecanico-backend.git
+---
 
->   Configurar la Base de Datos:
-
-        Crea una base de datos llamada taller_db (o el nombre que uses).
-
-        Configura las credenciales en application.properties o application.yml.
-
->   Compilar y Ejecutar:
-
-    ./mvnw spring-boot:run
-
-  (O ejecútalo directamente desde tu IDE favorito como IntelliJ o Eclipse).
-
-## 👥 Contribución
-
-Este es un proyecto personal con fines académicos y de implementación real. Si deseas sugerir mejoras o detectar errores, por favor abre un Issue o envía un Pull Request.
-
-## Desarrollado por: Gabriel Isidro Garcia
-### Estudiante de Analista en Informática
+<div align="center">
+  <b>Desarrollado por: Gabriel Isidro Garcia</b><br>
+  <i>Estudiante de Analista en Informática</i>
+</div>

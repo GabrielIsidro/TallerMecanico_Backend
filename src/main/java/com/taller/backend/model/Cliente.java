@@ -20,15 +20,28 @@ public class Cliente {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id; // Campo que representa el ID del cliente, es la clave primaria y se genera automáticamente por la base de datos
 
-    private String nombre; // Campo que representa el nombre del cliente
-    private String apellido; // Campo que representa el apellido del cliente
+    private String nombreCliente;
     private String email; // Campo que representa el email del cliente
     private String telefono; // Campo que representa el teléfono del cliente
     private String direccion; // Campo que representa la dirección del cliente
+    private Boolean esEmpresa;
+    private String documentoCuit;
 
     //RELACION: Un cliente tiene muchos vehiculos
     //"mappedBy" dice: "El dueño de la relacion es el campo 'cliente' en la clase Vehiculo"
     @OneToMany(mappedBy = "cliente", cascade = CascadeType.ALL)
     @ToString.Exclude // Evita que Lombok incluya esta lista en el método toString para prevenir recursión infinita
     private List<Vehiculo> vehiculos; // Campo que representa la lista de vehículos asociados a este cliente, es una relación de uno a muchos con la entidad Vehiculo
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "taller_id")
+    private Taller taller;
+
+    public Taller getTaller() { 
+        return taller;
+    }
+    public void setTaller(Taller taller){
+        this.taller = taller;
+    }
+
 }

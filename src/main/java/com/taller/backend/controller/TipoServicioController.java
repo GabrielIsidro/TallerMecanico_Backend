@@ -1,10 +1,14 @@
 package com.taller.backend.controller;
 
+import com.taller.backend.model.Taller;
 import com.taller.backend.model.TipoServicio;
+import com.taller.backend.model.Usuario;
 import com.taller.backend.repository.TipoServicioRepository;
+import com.taller.backend.repository.UsuarioRepository;
 import com.taller.backend.service.DataImportService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -34,6 +38,18 @@ public class TipoServicioController {
     @Autowired
     private DataImportService dataImportService;
 
+    // ---> 1. Inyectamos la base de datos de usuarios
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    // ---> 2. Función para descubrir de qué taller es la persona que hizo clic
+    private Taller getTallerAutenticado() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        return usuario.getTaller();
+    }
+
     // ==========================================
     // ENDPOINT PARA CARGA MASIVA (EXCEL/CSV)
     // ==========================================
@@ -44,8 +60,13 @@ public class TipoServicioController {
     @PostMapping("/importar")
     public ResponseEntity<String> importarPrecios(@RequestParam("file") MultipartFile file) {
         try {
+            // ---> 3. Le pasamos el Taller logueado al servicio de importación
+            Taller miTaller = getTallerAutenticado();
+            
             // Delegamos la tarea pesada (leer el CSV, parsear datos, guardar en BD) al Service
-            String resultado = dataImportService.importarPrecios(file);
+            // OJO: Vas a tener que agregar este segundo parámetro en DataImportService
+            String resultado = dataImportService.importarPrecios(file, miTaller); 
+            
             // Si todo sale bien, devolvemos un HTTP 200 (OK) con el mensaje de éxito
             return ResponseEntity.ok(resultado);
         } catch (Exception e) {
@@ -64,7 +85,8 @@ public class TipoServicioController {
      */
     @GetMapping
     public List<TipoServicio> listarServicios() {
-        return tipoServicioRepository.findAll();
+        // ---> 4. Chau findAll(). Filtramos por el taller logueado
+        return tipoServicioRepository.findByTaller(getTallerAutenticado());
     }
 
     /* * CREATE: Crea un nuevo servicio individual.
@@ -72,6 +94,8 @@ public class TipoServicioController {
      */
     @PostMapping
     public TipoServicio guardar(@RequestBody TipoServicio tipoServicio){
+        // ---> 5. Le estampamos la marca de agua del taller al precio nuevo
+        tipoServicio.setTaller(getTallerAutenticado());
         return tipoServicioRepository.save(tipoServicio);
     }
 
@@ -89,10 +113,9 @@ public class TipoServicioController {
         servicio.setDescripcion(detalles.getDescripcion());
         servicio.setPrecioA(detalles.getPrecioA());
         servicio.setPrecioB(detalles.getPrecioB());
-        servicio.setPrecioC(detalles.getPrecioC()); // Veo que tenés un PrecioC en el backend, ¡perfecto!
+        servicio.setPrecioC(detalles.getPrecioC()); 
 
-        // 3. ¡CORRECCIÓN APLICADA AQUÍ! 
-        // Guardamos el objeto 'servicio' (el cual ya tiene el ID correcto asociado a la base de datos).
+        // 3. Guardamos el objeto 'servicio' (el cual ya tiene el ID correcto y el Taller asociado).
         return tipoServicioRepository.save(servicio);
     }
 
