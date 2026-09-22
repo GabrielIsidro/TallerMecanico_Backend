@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -39,6 +40,7 @@ public class UsuarioController {
     private SecurityHelper securityHelper;
 
     @GetMapping("/me")
+    @Transactional(readOnly = true)
     public ResponseEntity<UsuarioResponseDTO> obtenerMiPerfil() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         Usuario usuario = usuarioRepository.findByEmail(email)
@@ -56,6 +58,7 @@ public class UsuarioController {
                 usuario.getTaller() != null ? usuario.getTaller().getTipoPlan() : null,
                 usuario.getTaller() != null ? usuario.getTaller().getFechaVencimiento() : null
         );
+        response.setDebeCambiarPassword(Boolean.TRUE.equals(usuario.getDebeCambiarPassword()));
 
         return ResponseEntity.ok(response);
     }
@@ -74,6 +77,7 @@ public class UsuarioController {
                 throw new BusinessRuleException("La contraseña actual es incorrecta. No se pudo actualizar la clave.");
             }
             usuario.setPassword(passwordEncoder.encode(request.getPasswordNueva()));
+            usuario.setDebeCambiarPassword(false);
         }
 
         usuarioRepository.save(usuario);

@@ -8,6 +8,7 @@ import com.taller.backend.modules.talleres.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 public class SecurityHelper {
@@ -19,6 +20,7 @@ public class SecurityHelper {
      * Obtiene el Taller asociado al usuario que está realizando la petición actual.
      * Lanza una excepción si el usuario no existe o no tiene un taller asignado.
      */
+    @Transactional(readOnly = true)
     public Taller getTallerAutenticado() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         Usuario usuario = usuarioRepository.findByEmail(email)

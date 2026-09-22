@@ -113,8 +113,41 @@ class TallerServiceTest {
                 anyString(),
                 anyString(),
                 eq("ADMIN_TALLER"),
-                eq(2L)
+                eq(2L),
+                eq(true)
         );
+    }
+
+    @Test
+    @DisplayName("Debe generar contraseña aleatoria cuando no se proporciona contraseña en el DTO")
+    void debeGenerarPasswordAleatoriaSiNoSeEspecifica() {
+        TallerRegistroDTO dto = new TallerRegistroDTO();
+        dto.setNombre("Taller Sin Clave");
+        dto.setTitular("Laura V");
+        dto.setEmailContacto("laura@taller.com");
+        dto.setPassword(null);
+
+        when(usuarioRepository.findByEmail("laura@taller.com")).thenReturn(Optional.empty());
+        when(tallerRepository.save(any(Taller.class))).thenAnswer(invocation -> {
+            Taller t = invocation.getArgument(0);
+            t.setId(3L);
+            return t;
+        });
+        when(passwordEncoder.encode(anyString())).thenReturn("encodedRandomPassword");
+
+        Taller creado = tallerService.crearTaller(dto);
+
+        assertNotNull(creado);
+        verify(usuarioRepository, times(1)).insertAdminTaller(
+                eq("laura@taller.com"),
+                eq("encodedRandomPassword"),
+                anyString(),
+                anyString(),
+                eq("ADMIN_TALLER"),
+                eq(3L),
+                eq(true)
+        );
+        verify(emailService, times(1)).enviarEmailBienvenida(eq("laura@taller.com"), eq("Taller Sin Clave"), anyString());
     }
 
     @Test

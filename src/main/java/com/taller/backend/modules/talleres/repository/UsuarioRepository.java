@@ -27,6 +27,6 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     @Modifying
     @Transactional
-    @Query(value = "INSERT INTO usuarios (email, password, nombre, apellido, rol, taller_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6)", nativeQuery = true)
-    void insertAdminTaller(String email, String password, String nombre, String apellido, String rol, Long tallerId);
+    @Query(value = "INSERT INTO usuarios (email, password, nombre, apellido, rol, taller_id, debe_cambiar_password) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)", nativeQuery = true)
+    void insertAdminTaller(String email, String password, String nombre, String apellido, String rol, Long tallerId, Boolean debeCambiarPassword);
 }

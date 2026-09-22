@@ -31,6 +31,15 @@ public class Usuario {
     @Column(nullable = false)
     private RolUsuario rol;
 
+    @Column(name = "debe_cambiar_password", nullable = true)
+    private Boolean debeCambiarPassword = false;
+
+    @Column(name = "codigo_recuperacion")
+    private String codigoRecuperacion;
+
+    @Column(name = "codigo_recuperacion_expiracion")
+    private java.time.LocalDateTime codigoRecuperacionExpiracion;
+
     // ---> LA MAGIA DEL SAAS <---
     // Muchos usuarios pueden pertenecer a un mismo taller.
     // nullable = true es VITAL, porque vos (el SUPER_ADMIN) no pertenecés a un taller específico, sos el dueño de todo.
@@ -38,7 +47,7 @@ public class Usuario {
     @Column(name = "taller_id", nullable = true)
     private Long tallerId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "taller_id", insertable = false, updatable = false)
     @JsonIgnore
     private Taller taller;

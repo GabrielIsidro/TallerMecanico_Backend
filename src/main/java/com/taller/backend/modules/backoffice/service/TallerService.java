@@ -65,9 +65,6 @@ public class TallerService {
         if (dto.getEmailContacto() == null || dto.getEmailContacto().trim().isEmpty()) {
             throw new BusinessRuleException("El email de contacto es obligatorio.");
         }
-        if (dto.getPassword() == null || dto.getPassword().trim().isEmpty()) {
-            throw new BusinessRuleException("La contraseña es obligatoria.");
-        }
 
         String email = dto.getEmailContacto().trim();
         if (usuarioRepository.findByEmail(email).isPresent()) {
@@ -92,26 +89,41 @@ public class TallerService {
                 ? dto.getApellidoAdmin().trim()
                 : (dto.getNombre() != null ? dto.getNombre() : "");
 
+        String passwordTemporal = (dto.getPassword() != null && !dto.getPassword().trim().isEmpty())
+                ? dto.getPassword().trim()
+                : generarPasswordAleatoria();
+
         try {
             usuarioRepository.insertAdminTaller(
                     email,
-                    passwordEncoder.encode(dto.getPassword().trim()),
+                    passwordEncoder.encode(passwordTemporal),
                     nombreAdmin,
                     apellidoAdmin,
                     RolUsuario.ADMIN_TALLER.name(),
-                    tallerGuardado.getId()
+                    tallerGuardado.getId(),
+                    true
             );
         } catch (Exception e) {
             throw new BusinessRuleException("Error al crear el administrador del taller: " + e.getMessage());
         }
 
         try {
-            emailService.enviarEmailBienvenida(email, tallerGuardado.getNombre(), dto.getPassword().trim());
+            emailService.enviarEmailBienvenida(email, tallerGuardado.getNombre(), passwordTemporal);
         } catch (Exception e) {
             System.err.println("Aviso: No se pudo enviar el email de bienvenida: " + e.getMessage());
         }
 
         return tallerGuardado;
+    }
+
+    private String generarPasswordAleatoria() {
+        String chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$*";
+        java.security.SecureRandom random = new java.security.SecureRandom();
+        StringBuilder sb = new StringBuilder(10);
+        for (int i = 0; i < 10; i++) {
+            sb.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        return sb.toString();
     }
 
     @Transactional

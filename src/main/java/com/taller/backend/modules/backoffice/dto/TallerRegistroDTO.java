@@ -20,8 +20,7 @@ public class TallerRegistroDTO {
     @Email(message = "El formato del email de contacto no es válido")
     private String emailContacto;
 
-    @NotBlank(message = "La contraseña es obligatoria")
-    @Size(min = 6, message = "La contraseña debe tener al menos 6 caracteres")
+    // Contraseña inicial opcional: si no se provee, se autogenera una clave temporal de 10 caracteres
     private String password;
     
     // Nombres del usuario admin para mayor personalización
