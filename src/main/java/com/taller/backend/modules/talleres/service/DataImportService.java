@@ -2,11 +2,14 @@ package com.taller.backend.modules.talleres.service;
 
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
+import com.taller.backend.core.exception.BusinessRuleException;
+import com.taller.backend.core.security.SecurityHelper;
 import com.taller.backend.modules.backoffice.model.Taller;
 import com.taller.backend.modules.talleres.model.TipoServicio;
 import com.taller.backend.modules.talleres.repository.TipoServicioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -26,18 +29,24 @@ public class DataImportService {
     @Autowired
     private TipoServicioRepository tipoServicioRepository;
 
+    @Autowired
+    private SecurityHelper securityHelper;
+
     /*
      * El formato esperado del CSV es:
      * Grupo,Descripcion,PrecioSugerido
      * Ejemplo:
      * FRENOS,Revisión de frenos,$1000
      */
+    @Transactional
     public String importarPrecios(MultipartFile file) throws IOException, CsvValidationException {
         
         // 1. Validación básica para no procesar la nada misma
-        if (file.isEmpty()){
-            throw new RuntimeException("El archivo está vacío. Por favor, selecciona un CSV válido.");
+        if (file == null || file.isEmpty()){
+            throw new BusinessRuleException("El archivo está vacío. Por favor, selecciona un CSV válido.");
         }
+
+        Taller miTaller = securityHelper.getTallerAutenticado();
 
         // 2. Try-with-resources: Abre los flujos de lectura y se asegura de cerrarlos al terminar
         try (Reader reader = new InputStreamReader(file.getInputStream());
@@ -71,12 +80,15 @@ public class DataImportService {
                 // Parseo inteligente de precios usando nuestro método auxiliar
                 servicio.setPrecioSugerido(parsearPrecio(fila[2]));
 
+                // Asociamos al taller del usuario autenticado
+                servicio.setTaller(miTaller);
+                servicio.setTallerId(miTaller.getId());
+
                 // Agregamos a la lista en lugar de guardar directamente en la BD
                 serviciosNuevos.add(servicio);
             }
             
             // 4. GUARDADO MASIVO (Bulk Insert)
-            // Esto es muchísimo más eficiente y rápido para el servidor y la base de datos
             if (!serviciosNuevos.isEmpty()) {
                 tipoServicioRepository.saveAll(serviciosNuevos);
             }
@@ -92,19 +104,14 @@ public class DataImportService {
      * Ejemplo de entrada: "$ 1.500,50" -> Salida: 1500.50
      */
     private Double parsearPrecio(String valor) {
-        // Si la celda está vacía, asumimos 0.0
         if (valor == null || valor.trim().isEmpty()) {
             return 0.0;
         }
 
         try {
-            // 1. Quitamos el signo peso
-            // 2. Quitamos los puntos de separador de miles
-            // 3. Cambiamos la coma decimal por punto (formato estándar de Java)
             String limpio = valor.replace("$","").replace(".","").replace(",", ".").trim();
             return Double.parseDouble(limpio);
         } catch (NumberFormatException e) {
-            // Si alguien escribió texto en vez de números en esa celda, no frenamos todo, guardamos como 0
             return 0.0;
         }
     }

@@ -1,14 +1,16 @@
 package com.taller.backend.modules.talleres.controller;
 
 import com.taller.backend.modules.talleres.model.Cliente;
-import com.taller.backend.modules.talleres.repository.ClienteRepository;
+import com.taller.backend.modules.talleres.service.ClienteService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/talleres/clientes")
@@ -16,7 +18,7 @@ import org.springframework.data.domain.Sort;
 public class ClienteController {
 
     @Autowired
-    private ClienteRepository clienteRepository;
+    private ClienteService clienteService;
 
     @GetMapping
     public ResponseEntity<Page<Cliente>> obtenerClientes(
@@ -25,42 +27,31 @@ public class ClienteController {
             @RequestParam(defaultValue = "") String search) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
-        Page<Cliente> clientesPage;
-
-        if (search != null && !search.trim().isEmpty()) {
-            clientesPage = clienteRepository.findByNombreClienteContainingIgnoreCase(search.trim(), pageable);
-        } else {
-            clientesPage = clienteRepository.findAll(pageable);
-        }
-
+        Page<Cliente> clientesPage = clienteService.obtenerClientesPaginados(pageable, search);
         return ResponseEntity.ok(clientesPage);
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<Cliente> obtenerClientePorId(@PathVariable Long id) {
+        Cliente cliente = clienteService.obtenerPorId(id);
+        return ResponseEntity.ok(cliente);
+    }
+
     @PostMapping
-    public Cliente crearCliente(@RequestBody Cliente cliente) {
-        return clienteRepository.save(cliente);
+    public ResponseEntity<Cliente> crearCliente(@Valid @RequestBody Cliente cliente) {
+        Cliente nuevoCliente = clienteService.guardarCliente(cliente);
+        return new ResponseEntity<>(nuevoCliente, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Cliente> actualizarCliente(@PathVariable Long id, @RequestBody Cliente detallesCliente) {
-        return clienteRepository.findById(id).map(cliente -> {
-            cliente.setNombreCliente(detallesCliente.getNombreCliente());
-            cliente.setTelefono(detallesCliente.getTelefono());
-            cliente.setDireccion(detallesCliente.getDireccion());
-            cliente.setEmail(detallesCliente.getEmail());
-            cliente.setEsEmpresa(detallesCliente.getEsEmpresa());
-            cliente.setDocumentoCuit(detallesCliente.getDocumentoCuit());
-
-            Cliente actualizado = clienteRepository.save(cliente);
-            return ResponseEntity.ok(actualizado);
-        }).orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<Cliente> actualizarCliente(@PathVariable Long id, @Valid @RequestBody Cliente detallesCliente) {
+        Cliente actualizado = clienteService.actualizarCliente(id, detallesCliente);
+        return ResponseEntity.ok(actualizado);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> eliminarCliente(@PathVariable Long id) {
-        return clienteRepository.findById(id).map(cliente -> {
-            clienteRepository.delete(cliente);
-            return ResponseEntity.ok().build();
-        }).orElse(ResponseEntity.notFound().build());
+        clienteService.eliminarCliente(id);
+        return ResponseEntity.ok().build();
     }
 }

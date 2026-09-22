@@ -1,19 +1,28 @@
 package com.taller.backend.modules.talleres.controller;
 
-import com.taller.backend.modules.talleres.dto.ActualizarPerfilRequest; // <--- Cambiado el DTO
-import com.taller.backend.modules.talleres.model.Usuario;
-import com.taller.backend.modules.talleres.model.RolUsuario;
-import com.taller.backend.modules.backoffice.model.Taller;
-import com.taller.backend.modules.talleres.repository.UsuarioRepository;
+import com.taller.backend.core.exception.BusinessRuleException;
+import com.taller.backend.core.exception.DuplicateResourceException;
+import com.taller.backend.core.exception.ResourceNotFoundException;
+import com.taller.backend.core.exception.UnauthorizedAccessException;
 import com.taller.backend.core.security.SecurityHelper;
+import com.taller.backend.modules.backoffice.model.Taller;
+import com.taller.backend.modules.talleres.dto.ActualizarPerfilRequest;
+import com.taller.backend.modules.talleres.dto.UsuarioResponseDTO;
+import com.taller.backend.modules.talleres.model.RolUsuario;
+import com.taller.backend.modules.talleres.model.Usuario;
+import com.taller.backend.modules.talleres.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/talleres/usuarios")
@@ -29,14 +38,13 @@ public class UsuarioController {
     @Autowired
     private SecurityHelper securityHelper;
 
-    // ---> NUEVO: Endpoint para obtener los datos del usuario logueado (para llenar el formulario)
     @GetMapping("/me")
-    public ResponseEntity<com.taller.backend.modules.talleres.dto.UsuarioResponseDTO> obtenerMiPerfil() {
+    public ResponseEntity<UsuarioResponseDTO> obtenerMiPerfil() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         Usuario usuario = usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + email));
 
-        com.taller.backend.modules.talleres.dto.UsuarioResponseDTO response = new com.taller.backend.modules.talleres.dto.UsuarioResponseDTO(
+        UsuarioResponseDTO response = new UsuarioResponseDTO(
                 usuario.getId(),
                 usuario.getEmail(),
                 usuario.getNombre(),
@@ -52,101 +60,93 @@ public class UsuarioController {
         return ResponseEntity.ok(response);
     }
 
-    // ---> ACTUALIZADO: Endpoint para guardar cambios (Datos básicos + Password opcional)
     @PostMapping("/actualizar-perfil")
-    public ResponseEntity<?> actualizarPerfil(@RequestBody ActualizarPerfilRequest request) {
-
-        // 1. Descubrimos quién es el usuario que hizo clic
+    public ResponseEntity<?> actualizarPerfil(@Valid @RequestBody ActualizarPerfilRequest request) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         Usuario usuario = usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + email));
 
-        // 2. Actualizamos datos básicos (siempre)
         usuario.setNombre(request.getNombre());
         usuario.setApellido(request.getApellido());
 
-        // 3. Lógica de Cambio de Contraseña (Solo si viene una passwordNueva)
         if (request.getPasswordNueva() != null && !request.getPasswordNueva().trim().isEmpty()) {
-
-            // Verificamos la password actual por seguridad
             if (!passwordEncoder.matches(request.getPasswordActual(), usuario.getPassword())) {
-                return ResponseEntity.badRequest().body("La contraseña actual es incorrecta. No se pudo actualizar la clave.");
+                throw new BusinessRuleException("La contraseña actual es incorrecta. No se pudo actualizar la clave.");
             }
-
-            // Encriptamos y guardamos la nueva
             usuario.setPassword(passwordEncoder.encode(request.getPasswordNueva()));
         }
 
-        // 4. Guardamos todo en la base de datos
         usuarioRepository.save(usuario);
 
-        // Devolvemos un JSON prolijo
         Map<String, String> response = new HashMap<>();
         response.put("mensaje", "¡Perfil actualizado con éxito!");
-
         return ResponseEntity.ok(response);
     }
 
-    // =========================================================================
-    // ENDPOINTS PARA GESTIÓN DE EQUIPO (MECÁNICOS)
-    // =========================================================================
-
     @GetMapping("/equipo")
-    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN_TALLER')")
-    public ResponseEntity<java.util.List<com.taller.backend.modules.talleres.dto.UsuarioResponseDTO>> listarEquipo() {
+    @PreAuthorize("hasRole('ADMIN_TALLER')")
+    public ResponseEntity<List<UsuarioResponseDTO>> listarEquipo() {
         Taller taller = securityHelper.getTallerAutenticado();
-        java.util.List<Usuario> equipo = usuarioRepository.findByTallerIdAndRol(taller.getId(), RolUsuario.MECANICO);
+        List<Usuario> equipo = usuarioRepository.findByTallerIdAndRol(taller.getId(), RolUsuario.MECANICO);
         
-        java.util.List<com.taller.backend.modules.talleres.dto.UsuarioResponseDTO> response = equipo.stream()
-            .map(u -> new com.taller.backend.modules.talleres.dto.UsuarioResponseDTO(
+        List<UsuarioResponseDTO> response = equipo.stream()
+            .map(u -> new UsuarioResponseDTO(
                 u.getId(), u.getEmail(), u.getNombre(), u.getApellido(), u.getRol(),
                 taller.getId(), taller.getNombre(), taller.getEstadoSuscripcion(), taller.getTipoPlan(), taller.getFechaVencimiento()
-            )).collect(java.util.stream.Collectors.toList());
+            )).collect(Collectors.toList());
             
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/equipo")
-    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN_TALLER')")
+    @PreAuthorize("hasRole('ADMIN_TALLER')")
     public ResponseEntity<?> crearMiembroEquipo(@RequestBody Map<String, String> request) {
         String email = request.get("email");
         String nombre = request.get("nombre");
         String apellido = request.get("apellido");
         String password = request.get("password");
 
-        if (usuarioRepository.findByEmail(email).isPresent()) {
-            return ResponseEntity.badRequest().body("El correo ya está registrado.");
+        if (email == null || email.trim().isEmpty()) {
+            throw new BusinessRuleException("El correo electrónico es obligatorio.");
+        }
+        if (password == null || password.trim().isEmpty()) {
+            throw new BusinessRuleException("La contraseña es obligatoria.");
+        }
+
+        if (usuarioRepository.findByEmail(email.trim()).isPresent()) {
+            throw new DuplicateResourceException("El correo ya está registrado.");
         }
 
         Taller taller = securityHelper.getTallerAutenticado();
 
         Usuario mecanico = new Usuario();
-        mecanico.setEmail(email);
+        mecanico.setEmail(email.trim());
         mecanico.setNombre(nombre);
         mecanico.setApellido(apellido);
-        mecanico.setPassword(passwordEncoder.encode(password));
+        mecanico.setPassword(passwordEncoder.encode(password.trim()));
         mecanico.setRol(RolUsuario.MECANICO);
         mecanico.setTaller(taller);
 
         usuarioRepository.save(mecanico);
 
-        return ResponseEntity.ok(new com.taller.backend.modules.talleres.dto.UsuarioResponseDTO(
+        return ResponseEntity.ok(new UsuarioResponseDTO(
             mecanico.getId(), mecanico.getEmail(), mecanico.getNombre(), mecanico.getApellido(), mecanico.getRol(),
             taller.getId(), taller.getNombre(), taller.getEstadoSuscripcion(), taller.getTipoPlan(), taller.getFechaVencimiento()
         ));
     }
 
     @DeleteMapping("/equipo/{id}")
-    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN_TALLER')")
+    @PreAuthorize("hasRole('ADMIN_TALLER')")
     public ResponseEntity<?> eliminarMiembroEquipo(@PathVariable Long id) {
         Taller taller = securityHelper.getTallerAutenticado();
         
-        return usuarioRepository.findById(id).map(usuario -> {
-            if (!usuario.getTaller().getId().equals(taller.getId()) || !usuario.getRol().equals(RolUsuario.MECANICO)) {
-                throw new RuntimeException("Acceso denegado o usuario inválido");
-            }
-            usuarioRepository.delete(usuario);
-            return ResponseEntity.ok().build();
-        }).orElse(ResponseEntity.notFound().build());
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+
+        if (usuario.getTaller() == null || !usuario.getTaller().getId().equals(taller.getId()) || !usuario.getRol().equals(RolUsuario.MECANICO)) {
+            throw new UnauthorizedAccessException("Acceso denegado o usuario inválido");
+        }
+        usuarioRepository.delete(usuario);
+        return ResponseEntity.ok().build();
     }
 }

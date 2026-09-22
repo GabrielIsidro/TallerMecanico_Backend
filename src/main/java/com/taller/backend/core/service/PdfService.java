@@ -38,11 +38,33 @@ public class PdfService {
             document.add(title);
 
             // Info Taller & Cliente
-            document.add(new Paragraph("Taller: " + orden.getVehiculo().getCliente().getTaller().getNombre(), fontBold));
-            document.add(new Paragraph("Fecha: " + orden.getFechaIngreso().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")), fontNormal));
-            document.add(new Paragraph("Cliente: " + orden.getVehiculo().getCliente().getNombreCliente(), fontNormal));
-            document.add(new Paragraph("Vehículo: " + orden.getVehiculo().getMarca() + " " + orden.getVehiculo().getModelo() + " - " + orden.getVehiculo().getPatente(), fontNormal));
-            document.add(new Paragraph("Estado: " + orden.getEstado().name(), fontNormal));
+            String nombreTaller = "Tu Taller";
+            if (orden.getTaller() != null && orden.getTaller().getNombre() != null) {
+                nombreTaller = orden.getTaller().getNombre();
+            } else if (orden.getVehiculo() != null && orden.getVehiculo().getCliente() != null 
+                    && orden.getVehiculo().getCliente().getTaller() != null) {
+                nombreTaller = orden.getVehiculo().getCliente().getTaller().getNombre();
+            }
+
+            String fechaStr = orden.getFechaIngreso() != null 
+                    ? orden.getFechaIngreso().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                    : "N/A";
+
+            String nombreCliente = (orden.getVehiculo() != null && orden.getVehiculo().getCliente() != null)
+                    ? orden.getVehiculo().getCliente().getNombreCliente()
+                    : "Consumidor Final";
+
+            String vehiculoStr = (orden.getVehiculo() != null)
+                    ? (orden.getVehiculo().getMarca() + " " + orden.getVehiculo().getModelo() + " - " + orden.getVehiculo().getPatente())
+                    : "N/A";
+
+            String estadoStr = orden.getEstado() != null ? orden.getEstado().name() : "PENDIENTE";
+
+            document.add(new Paragraph("Taller: " + nombreTaller, fontBold));
+            document.add(new Paragraph("Fecha: " + fechaStr, fontNormal));
+            document.add(new Paragraph("Cliente: " + nombreCliente, fontNormal));
+            document.add(new Paragraph("Vehículo: " + vehiculoStr, fontNormal));
+            document.add(new Paragraph("Estado: " + estadoStr, fontNormal));
             
             Paragraph space = new Paragraph(" ");
             space.setSpacingAfter(15);

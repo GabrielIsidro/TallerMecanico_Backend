@@ -1,17 +1,21 @@
 package com.taller.backend.modules.talleres.repository;
 
-import com.taller.backend.modules.talleres.model.Cliente;
 import com.taller.backend.modules.backoffice.model.Taller;
-import com.taller.backend.modules.talleres.model.Vehiculo; // La clase Vehiculo que representa la entidad de tu base de datos
-import org.springframework.data.jpa.repository.JpaRepository; // El repositorio que te permite interactuar con la base de datos para la entidad Vehiculo, proporciona métodos CRUD básicos sin necesidad de implementarlos tú mismo
-import org.springframework.stereotype.Repository; // Anotación que le dice a Spring que esta interfaz es un repositorio, lo que la hace elegible para ser inyectada en otras partes de tu aplicación
-import java.util.Optional; // Importa la clase Optional para manejar valores que pueden ser nulos, como cuando buscas un Vehiculo por patente y no lo encuentras
-import java.util.List;
+import com.taller.backend.modules.talleres.model.Vehiculo;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-@Repository // Anotación que combina las dos anteriores
-public interface VehiculoRepository extends JpaRepository<Vehiculo, Long> { // Extiende JpaRepository, lo que le da acceso a métodos CRUD básicos para la entidad Vehiculo, con Long como tipo de ID
-    Optional <Vehiculo> findByPatente(String patente); // Método personalizado que busca un Vehiculo por su patente, devuelve un Optional<Vehiculo> que puede contener un Vehiculo o estar vacío si no se encuentra
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface VehiculoRepository extends JpaRepository<Vehiculo, Long> {
+    Optional<Vehiculo> findByPatente(String patente);
     List<Vehiculo> findByTallerId(Long tallerId);
     List<Vehiculo> findByTaller(Taller taller);
+    Page<Vehiculo> findByTaller(Taller taller, Pageable pageable);
+    Page<Vehiculo> findByPatenteContainingIgnoreCaseAndTaller(String patente, Taller taller, Pageable pageable);
     void deleteByTallerId(Long tallerId);
 }

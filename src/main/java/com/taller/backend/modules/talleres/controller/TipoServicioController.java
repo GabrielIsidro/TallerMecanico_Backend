@@ -1,14 +1,12 @@
 package com.taller.backend.modules.talleres.controller;
 
-import com.taller.backend.modules.backoffice.model.Taller;
 import com.taller.backend.modules.talleres.model.TipoServicio;
-import com.taller.backend.modules.talleres.model.Usuario;
-import com.taller.backend.modules.talleres.repository.TipoServicioRepository;
-import com.taller.backend.modules.talleres.repository.UsuarioRepository;
 import com.taller.backend.modules.talleres.service.DataImportService;
+import com.taller.backend.modules.talleres.service.TipoServicioService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -20,7 +18,7 @@ import java.util.List;
 public class TipoServicioController {
 
     @Autowired
-    private TipoServicioRepository tipoServicioRepository;
+    private TipoServicioService tipoServicioService;
 
     @Autowired
     private DataImportService dataImportService;
@@ -31,36 +29,35 @@ public class TipoServicioController {
             String resultado = dataImportService.importarPrecios(file); 
             return ResponseEntity.ok(resultado);
         } catch (Exception e) {
-            e.printStackTrace();
             return ResponseEntity.badRequest().body("Error al importar: " + e.getMessage());
         }
     }
     
     @GetMapping
-    public List<TipoServicio> listarServicios() {
-        return tipoServicioRepository.findAll();
+    public ResponseEntity<List<TipoServicio>> listarServicios(@RequestParam(required = false) String grupo) {
+        return ResponseEntity.ok(tipoServicioService.listarServicios(grupo));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<TipoServicio> obtenerPorId(@PathVariable Long id) {
+        return ResponseEntity.ok(tipoServicioService.obtenerPorId(id));
     }
 
     @PostMapping
-    public TipoServicio guardar(@RequestBody TipoServicio tipoServicio){
-        return tipoServicioRepository.save(tipoServicio);
+    public ResponseEntity<TipoServicio> guardar(@Valid @RequestBody TipoServicio tipoServicio) {
+        TipoServicio nuevo = tipoServicioService.guardar(tipoServicio);
+        return new ResponseEntity<>(nuevo, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public TipoServicio actualizar(@PathVariable Long id, @RequestBody TipoServicio detalles){
-        TipoServicio servicio = tipoServicioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Servicio no encontrado con ID: " + id));
-        
-        servicio.setGrupo(detalles.getGrupo());
-        servicio.setDescripcion(detalles.getDescripcion());
-        servicio.setPrecioSugerido(detalles.getPrecioSugerido()); 
-
-        return tipoServicioRepository.save(servicio);
+    public ResponseEntity<TipoServicio> actualizar(@PathVariable Long id, @Valid @RequestBody TipoServicio detalles) {
+        TipoServicio actualizado = tipoServicioService.actualizar(id, detalles);
+        return ResponseEntity.ok(actualizado);
     }
 
     @DeleteMapping("/{id}")
-    public void eliminar(@PathVariable Long id){
-        tipoServicioRepository.deleteById(id);
+    public ResponseEntity<?> eliminar(@PathVariable Long id) {
+        tipoServicioService.eliminar(id);
+        return ResponseEntity.ok().build();
     }
-
 }

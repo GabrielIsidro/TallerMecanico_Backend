@@ -20,4 +20,9 @@ public class TenantIdentifierResolver implements CurrentTenantIdentifierResolver
     public boolean validateExistingCurrentSessions() {
         return true;
     }
+
+    @Override
+    public boolean isRoot(Long tenantId) {
+        return tenantId != null && tenantId.equals(-1L);
+    }
 }

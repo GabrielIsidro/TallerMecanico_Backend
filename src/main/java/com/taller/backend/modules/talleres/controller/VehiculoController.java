@@ -1,12 +1,15 @@
 package com.taller.backend.modules.talleres.controller;
 
 import com.taller.backend.modules.talleres.model.Vehiculo;
-import com.taller.backend.modules.talleres.repository.VehiculoRepository;
+import com.taller.backend.modules.talleres.service.VehiculoService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/talleres/vehiculos")
@@ -14,40 +17,42 @@ import java.util.List;
 public class VehiculoController {
 
     @Autowired
-    private VehiculoRepository vehiculoRepository;
+    private VehiculoService vehiculoService;
 
     @GetMapping
-    public List<Vehiculo> obtenerVehiculos() {
-        return vehiculoRepository.findAll();
+    public ResponseEntity<?> obtenerVehiculos(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(defaultValue = "") String search) {
+        if (page != null) {
+            int pageSize = size != null ? size : 10;
+            Pageable pageable = PageRequest.of(page, pageSize, Sort.by("id").descending());
+            return ResponseEntity.ok(vehiculoService.obtenerVehiculosPaginados(pageable, search));
+        }
+        return ResponseEntity.ok(vehiculoService.getAllVehiculos());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Vehiculo> obtenerVehiculoPorId(@PathVariable Long id) {
+        Vehiculo vehiculo = vehiculoService.getVehiculoById(id);
+        return ResponseEntity.ok(vehiculo);
     }
 
     @PostMapping
-    public Vehiculo crearVehiculo(@RequestBody Vehiculo vehiculo) {
-        return vehiculoRepository.save(vehiculo);
+    public ResponseEntity<Vehiculo> crearVehiculo(@Valid @RequestBody Vehiculo vehiculo) {
+        Vehiculo nuevoVehiculo = vehiculoService.guardarVehiculo(vehiculo);
+        return new ResponseEntity<>(nuevoVehiculo, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Vehiculo> actualizarVehiculo(@PathVariable Long id, @RequestBody Vehiculo detallesVehiculo) {
-        return vehiculoRepository.findById(id).map(vehiculo -> {
-            vehiculo.setPatente(detallesVehiculo.getPatente());
-            vehiculo.setModelo(detallesVehiculo.getModelo());
-            vehiculo.setMarca(detallesVehiculo.getMarca());
-            vehiculo.setAnio(detallesVehiculo.getAnio());
-            vehiculo.setNumeroMotor(detallesVehiculo.getNumeroMotor());
-            vehiculo.setNumeroChasis(detallesVehiculo.getNumeroChasis());
-            vehiculo.setKilometraje(detallesVehiculo.getKilometraje());
-            vehiculo.setProximoServiceKm(detallesVehiculo.getProximoServiceKm());
-            vehiculo.setCliente(detallesVehiculo.getCliente());
-
-            return ResponseEntity.ok(vehiculoRepository.save(vehiculo));
-        }).orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<Vehiculo> actualizarVehiculo(@PathVariable Long id, @Valid @RequestBody Vehiculo detallesVehiculo) {
+        Vehiculo actualizado = vehiculoService.actualizarVehiculo(id, detallesVehiculo);
+        return ResponseEntity.ok(actualizado);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> eliminarVehiculo(@PathVariable Long id) {
-        return vehiculoRepository.findById(id).map(vehiculo -> {
-            vehiculoRepository.delete(vehiculo);
-            return ResponseEntity.ok().build();
-        }).orElse(ResponseEntity.notFound().build());
+        vehiculoService.deleteVehiculo(id);
+        return ResponseEntity.ok().build();
     }
 }

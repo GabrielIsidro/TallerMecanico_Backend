@@ -1,21 +1,25 @@
 package com.taller.backend.modules.talleres.model;
-import org.hibernate.annotations.TenantId;
-import com.taller.backend.modules.backoffice.model.Taller;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.taller.backend.core.model.AuditableEntity;
+import com.taller.backend.modules.backoffice.model.Taller;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.ToString;
+import org.hibernate.annotations.TenantId;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "ordenes_trabajo")
 @Data
-public class OrdenTrabajo {
+@EqualsAndHashCode(callSuper = true)
+public class OrdenTrabajo extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -43,31 +47,28 @@ public class OrdenTrabajo {
     @Enumerated(EnumType.STRING) 
     private FormaPago formaPago;
 
-    // RELACIÓN: Una orden pertenece a un Vehiculo
     @ManyToOne
     @JoinColumn(name = "vehiculo_id") 
     @JsonIgnoreProperties("ordenes") 
     private Vehiculo vehiculo;
 
-    // RELACIÓN: Lista de Servicios (Mano de obra)
     @ToString.Exclude 
     @OneToMany(mappedBy = "orden", cascade = CascadeType.ALL, orphanRemoval = true) 
     @JsonIgnoreProperties("orden") 
     private List<ItemOrden> items = new ArrayList<>();
 
-    // ---> NUEVO: Lista de Repuestos dinámicos
     @ToString.Exclude
     @OneToMany(mappedBy = "ordenTrabajo", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnoreProperties("ordenTrabajo") 
     private List<RepuestoOrden> repuestos = new ArrayList<>();
 
-    // Muchas órdenes son emitidas por un taller
     @TenantId
     @Column(name = "taller_id")
     private Long tallerId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "taller_id", insertable = false, updatable = false)
+    @JsonIgnore
     private Taller taller;
 
     @PrePersist
@@ -76,8 +77,12 @@ public class OrdenTrabajo {
         if (fechaIngreso == null) {
             fechaIngreso = LocalDateTime.now();
         }
-        // Actualiza el costo total sumando servicios + repuestos
-        this.costoTotal = getTotal(); 
+        Double totalItems = getTotal();
+        if (totalItems > 0.0) {
+            this.costoTotal = totalItems;
+        } else if (this.costoTotal == null) {
+            this.costoTotal = 0.0;
+        }
     }
 
     public void agregarItem(ItemOrden item) {
@@ -85,26 +90,20 @@ public class OrdenTrabajo {
         item.setOrden(this); 
     }
 
-    // ---> NUEVO: Método helper para agregar repuestos a la orden
     public void agregarRepuesto(RepuestoOrden repuesto) {
         repuestos.add(repuesto);
         repuesto.setOrdenTrabajo(this);
     }
 
-    /**
-     * ---> ACTUALIZADO: Ahora suma los servicios Y los repuestos
-     */
     public Double getTotal() {
         double total = 0.0;
         
-        // 1. Sumar la mano de obra (Items de servicio)
         for (ItemOrden item : items){
             if (item.getSubtotal() != null) {
                 total += item.getSubtotal();
             }
         }
         
-        // 2. Sumar los repuestos (Precio cobrado al cliente)
         for (RepuestoOrden repuesto : repuestos) {
             if (repuesto.getPrecioCobrado() != null) {
                 total += repuesto.getPrecioCobrado();
@@ -114,7 +113,6 @@ public class OrdenTrabajo {
         return total;
     }
 
-    // Setters y Getters explícitos del Taller (Lombok ya los hace, pero los dejamos por si los estabas usando)
     public Taller getTaller() { return taller; }
     public void setTaller(Taller taller) { this.taller = taller; }
 }

@@ -1,15 +1,16 @@
 package com.taller.backend.modules.talleres.controller;
 
 import com.taller.backend.modules.talleres.model.Repuesto;
-import com.taller.backend.modules.backoffice.model.Taller;
-import com.taller.backend.modules.talleres.repository.RepuestoRepository;
-import com.taller.backend.core.security.SecurityHelper;
+import com.taller.backend.modules.talleres.service.RepuestoService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/talleres/repuestos")
@@ -17,39 +18,47 @@ import java.util.List;
 public class RepuestoController {
 
     @Autowired
-    private RepuestoRepository repuestoRepository;
+    private RepuestoService repuestoService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN_TALLER', 'MECANICO')")
-    public ResponseEntity<List<Repuesto>> listarRepuestos() {
-        return ResponseEntity.ok(repuestoRepository.findAll());
+    public ResponseEntity<?> listarRepuestos(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(defaultValue = "") String search,
+            @RequestParam(required = false) Boolean bajoStock) {
+        if (page != null) {
+            int pageSize = size != null ? size : 10;
+            Pageable pageable = PageRequest.of(page, pageSize, Sort.by("id").descending());
+            return ResponseEntity.ok(repuestoService.obtenerRepuestosPaginados(pageable, search, bajoStock));
+        }
+        return ResponseEntity.ok(repuestoService.listarRepuestos());
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN_TALLER', 'MECANICO')")
+    public ResponseEntity<Repuesto> obtenerRepuestoPorId(@PathVariable Long id) {
+        return ResponseEntity.ok(repuestoService.obtenerPorId(id));
     }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN_TALLER')")
-    public ResponseEntity<Repuesto> crearRepuesto(@RequestBody Repuesto repuesto) {
-        return ResponseEntity.ok(repuestoRepository.save(repuesto));
+    public ResponseEntity<Repuesto> crearRepuesto(@Valid @RequestBody Repuesto repuesto) {
+        Repuesto nuevo = repuestoService.guardarRepuesto(repuesto);
+        return new ResponseEntity<>(nuevo, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN_TALLER')")
-    public ResponseEntity<Repuesto> actualizarRepuesto(@PathVariable Long id, @RequestBody Repuesto detalles) {
-        return repuestoRepository.findById(id).map(repuesto -> {
-            repuesto.setNombre(detalles.getNombre());
-            repuesto.setSku(detalles.getSku());
-            repuesto.setCantidad(detalles.getCantidad());
-            repuesto.setStockMinimo(detalles.getStockMinimo());
-            repuesto.setPrecio(detalles.getPrecio());
-            return ResponseEntity.ok(repuestoRepository.save(repuesto));
-        }).orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<Repuesto> actualizarRepuesto(@PathVariable Long id, @Valid @RequestBody Repuesto detalles) {
+        Repuesto actualizado = repuestoService.actualizarRepuesto(id, detalles);
+        return ResponseEntity.ok(actualizado);
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN_TALLER')")
     public ResponseEntity<?> eliminarRepuesto(@PathVariable Long id) {
-        return repuestoRepository.findById(id).map(repuesto -> {
-            repuestoRepository.delete(repuesto);
-            return ResponseEntity.ok().build();
-        }).orElse(ResponseEntity.notFound().build());
+        repuestoService.eliminarRepuesto(id);
+        return ResponseEntity.ok().build();
     }
 }

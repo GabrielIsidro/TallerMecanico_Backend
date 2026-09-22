@@ -32,6 +32,11 @@
 set -euf
 [ "${MVNW_VERBOSE-}" != debug ] || set -x
 
+if [ -z "${JAVA_HOME-}" ] && [ -d "$HOME/.jdks/temurin-17" ]; then
+  export JAVA_HOME="$HOME/.jdks/temurin-17"
+  export PATH="$JAVA_HOME/bin:$PATH"
+fi
+
 # OS specific support.
 native_path() { printf %s\\n "$1"; }
 case "$(uname)" in
@@ -43,6 +48,9 @@ esac
 
 # set JAVACMD and JAVACCMD
 set_java_home() {
+  if [ -z "${JAVA_HOME-}" ] && [ -d "$HOME/.jdks/temurin-17" ]; then
+    JAVA_HOME="$HOME/.jdks/temurin-17"
+  fi
   # For Cygwin and MinGW, ensure paths are in Unix format before anything is touched
   if [ -n "${JAVA_HOME-}" ]; then
     if [ -x "$JAVA_HOME/jre/sh/java" ]; then

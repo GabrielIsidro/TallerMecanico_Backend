@@ -1,31 +1,48 @@
 package com.taller.backend.modules.talleres.model;
-import org.hibernate.annotations.TenantId;
-import com.taller.backend.modules.backoffice.model.Taller;
 
-import jakarta.persistence.*;
-import java.math.BigDecimal;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.taller.backend.core.model.AuditableEntity;
+import com.taller.backend.modules.backoffice.model.Taller;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import org.hibernate.annotations.TenantId;
+
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "repuestos")
-public class Repuesto {
+@Data
+@EqualsAndHashCode(callSuper = true)
+public class Repuesto extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "El nombre del repuesto es obligatorio")
     @Column(nullable = false)
     private String nombre;
 
     @Column(nullable = true)
     private String sku;
 
+    @NotNull(message = "La cantidad es obligatoria")
+    @Min(value = 0, message = "La cantidad no puede ser negativa")
     @Column(nullable = false)
     private Integer cantidad;
 
+    @NotNull(message = "El stock mínimo es obligatorio")
+    @Min(value = 0, message = "El stock mínimo no puede ser negativo")
     @Column(nullable = false)
     private Integer stockMinimo;
 
+    @NotNull(message = "El precio es obligatorio")
+    @DecimalMin(value = "0.0", message = "El precio no puede ser negativo")
     @Column(nullable = false)
     private BigDecimal precio;
 
@@ -37,62 +54,4 @@ public class Repuesto {
     @JoinColumn(name = "taller_id", insertable = false, updatable = false)
     @JsonIgnore
     private Taller taller;
-
-    public Repuesto() {}
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getNombre() {
-        return nombre;
-    }
-
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
-    }
-
-    public String getSku() {
-        return sku;
-    }
-
-    public void setSku(String sku) {
-        this.sku = sku;
-    }
-
-    public Integer getCantidad() {
-        return cantidad;
-    }
-
-    public void setCantidad(Integer cantidad) {
-        this.cantidad = cantidad;
-    }
-
-    public Integer getStockMinimo() {
-        return stockMinimo;
-    }
-
-    public void setStockMinimo(Integer stockMinimo) {
-        this.stockMinimo = stockMinimo;
-    }
-
-    public BigDecimal getPrecio() {
-        return precio;
-    }
-
-    public void setPrecio(BigDecimal precio) {
-        this.precio = precio;
-    }
-
-    public Taller getTaller() {
-        return taller;
-    }
-
-    public void setTaller(Taller taller) {
-        this.taller = taller;
-    }
 }

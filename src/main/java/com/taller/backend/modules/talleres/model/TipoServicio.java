@@ -1,13 +1,16 @@
 package com.taller.backend.modules.talleres.model;
-import org.hibernate.annotations.TenantId;
-import com.taller.backend.modules.backoffice.model.Taller;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.taller.backend.modules.backoffice.model.Taller;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import org.hibernate.annotations.TenantId;
 
 /**
  * Clase que representa un tipo de servicio en el taller mecánico.
- * Contiene información sobre el grupo al que pertenece, una descripción del servicio y los precios asociados.
  */
 @Entity
 @Table(name = "tipo_servicio")
@@ -16,14 +19,20 @@ public class TipoServicio {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id; // Identificador único del tipo de servicio
+    private Long id;
 
-    private String grupo; // Grupo al que pertenece el servicio (por ejemplo, "Mantenimiento", "Reparación", etc.)
+    @NotBlank(message = "El grupo es obligatorio")
+    @Column(nullable = false)
+    private String grupo;
 
-    @Column(length = 500)
-    private String descripcion; // Descripción detallada del servicio
+    @NotBlank(message = "La descripción es obligatoria")
+    @Column(length = 500, nullable = false)
+    private String descripcion;
 
-    private Double precioSugerido; // Precio de referencia para el servicio
+    @NotNull(message = "El precio sugerido es obligatorio")
+    @DecimalMin(value = "0.0", message = "El precio no puede ser negativo")
+    @Column(nullable = false)
+    private Double precioSugerido;
 
     @TenantId
     @Column(name = "taller_id")
@@ -31,6 +40,6 @@ public class TipoServicio {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "taller_id", insertable = false, updatable = false)
+    @JsonIgnore
     private Taller taller;
-
 }

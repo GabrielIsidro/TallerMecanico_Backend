@@ -1,5 +1,6 @@
 package com.taller.backend.modules.talleres.model;
 import org.hibernate.annotations.TenantId;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.taller.backend.modules.backoffice.model.Taller;
 
 import jakarta.persistence.*;
@@ -20,6 +21,7 @@ public class Usuario {
 
     // Acá NO se guarda "123456", Spring Security va a guardar un código encriptado
     @Column(nullable = false)
+    @JsonIgnore
     private String password; 
 
     private String nombre;
@@ -38,5 +40,6 @@ public class Usuario {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "taller_id", insertable = false, updatable = false)
+    @JsonIgnore
     private Taller taller;
 }

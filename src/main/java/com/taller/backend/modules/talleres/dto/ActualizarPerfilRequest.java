@@ -1,14 +1,17 @@
 package com.taller.backend.modules.talleres.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
 public class ActualizarPerfilRequest {
-    // Estos dos campos son nuevos
+
+    @NotBlank(message = "El nombre es obligatorio")
     private String nombre;
+
+    @NotBlank(message = "El apellido es obligatorio")
     private String apellido;
 
-    // Estos dos se quedan
     private String passwordActual;
     private String passwordNueva;
 }

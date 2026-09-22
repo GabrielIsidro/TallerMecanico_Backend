@@ -1,39 +1,48 @@
 package com.taller.backend.modules.talleres.model;
-import org.hibernate.annotations.TenantId;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.taller.backend.core.model.AuditableEntity;
 import com.taller.backend.modules.backoffice.model.Taller;
-
-import jakarta.persistence.*; // Importa las anotaciones de JPA para definir la entidad y sus propiedades
+import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.ToString;
+import org.hibernate.annotations.TenantId;
 
-import java.util.List; // Importa la clase List para manejar colecciones de objetos
+import java.util.List;
 
 /**
  * Clase que representa un cliente en el taller mecánico.
- * Contiene información sobre el nombre, apellido, email, teléfono y dirección del cliente.
- * También tiene una relación de uno a muchos con la entidad Vehiculo.
  */
-@Entity // Anotación que le dice a Spring que esta clase es una entidad JPA
-@Table(name = "clientes") // Anotación que especifica el nombre de la tabla en la base de datos
-@Data // Anotación de Lombok que genera automáticamente getters, setters, toString, equals y hashCode
-public class Cliente {
+@Entity
+@Table(name = "clientes")
+@Data
+@EqualsAndHashCode(callSuper = true)
+public class Cliente extends AuditableEntity {
 
-    @Id // Anotación que indica que este campo es la clave primaria de la entidad
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id; // Campo que representa el ID del cliente, es la clave primaria y se genera automáticamente por la base de datos
+    private Long id;
 
+    @NotBlank(message = "El nombre del cliente es obligatorio")
+    @Column(nullable = false)
     private String nombreCliente;
-    private String email; // Campo que representa el email del cliente
-    private String telefono; // Campo que representa el teléfono del cliente
-    private String direccion; // Campo que representa la dirección del cliente
+
+    @Email(message = "El formato de correo electrónico no es válido")
+    private String email;
+
+    private String telefono;
+    private String direccion;
     private Boolean esEmpresa;
     private String documentoCuit;
 
-    //RELACION: Un cliente tiene muchos vehiculos
-    //"mappedBy" dice: "El dueño de la relacion es el campo 'cliente' en la clase Vehiculo"
     @OneToMany(mappedBy = "cliente", cascade = CascadeType.ALL)
-    @ToString.Exclude // Evita que Lombok incluya esta lista en el método toString para prevenir recursión infinita
-    private List<Vehiculo> vehiculos; // Campo que representa la lista de vehículos asociados a este cliente, es una relación de uno a muchos con la entidad Vehiculo
+    @ToString.Exclude
+    @JsonIgnoreProperties("cliente")
+    private List<Vehiculo> vehiculos;
 
     @TenantId
     @Column(name = "taller_id")
@@ -41,6 +50,7 @@ public class Cliente {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "taller_id", insertable = false, updatable = false)
+    @JsonIgnore
     private Taller taller;
 
     public Taller getTaller() { 
@@ -49,5 +59,4 @@ public class Cliente {
     public void setTaller(Taller taller){
         this.taller = taller;
     }
-
 }

@@ -1,33 +1,26 @@
 package com.taller.backend.modules.talleres.controller;
 
+import com.taller.backend.core.service.PdfService;
+import com.taller.backend.modules.talleres.dto.ActualizarOrdenRequest;
 import com.taller.backend.modules.talleres.dto.NuevaOrdenRequest;
-import com.taller.backend.modules.talleres.model.ItemOrden;
-import com.taller.backend.modules.talleres.model.OrdenTrabajo;
-import com.taller.backend.modules.backoffice.model.Taller;
-import com.taller.backend.modules.talleres.model.Usuario;
-import com.taller.backend.modules.talleres.repository.UsuarioRepository;
-import com.taller.backend.modules.talleres.repository.OrdenTrabajoRepository;
-import com.taller.backend.modules.talleres.repository.VehiculoRepository;
-import com.taller.backend.modules.talleres.service.OrdenTrabajoService;
 import com.taller.backend.modules.talleres.model.EstadoOrden;
 import com.taller.backend.modules.talleres.model.FormaPago;
-import com.taller.backend.core.security.SecurityHelper;
-import com.taller.backend.core.service.PdfService;
-
+import com.taller.backend.modules.talleres.model.OrdenTrabajo;
+import com.taller.backend.modules.talleres.service.OrdenTrabajoService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-
-import java.util.List;
-import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
-@RestController 
+import java.util.List;
+
+@RestController
 @RequestMapping("/api/v1/talleres/ordenes") 
 @CrossOrigin(origins = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PATCH, RequestMethod.PUT, RequestMethod.DELETE})
 public class OrdenTrabajoController {
@@ -36,29 +29,18 @@ public class OrdenTrabajoController {
     private OrdenTrabajoService ordenService;
 
     @Autowired
-    private OrdenTrabajoRepository ordenTrabajoRepository;
-
-    @Autowired
     private PdfService pdfService;
 
     @PostMapping
-    public ResponseEntity<OrdenTrabajo> crearOrden(@RequestBody NuevaOrdenRequest request) {
-        try {
-            OrdenTrabajo nuevaOrden = ordenService.crearOrden(request);
-            return ResponseEntity.ok(nuevaOrden);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().build();
-        }
+    public ResponseEntity<OrdenTrabajo> crearOrden(@Valid @RequestBody NuevaOrdenRequest request) {
+        OrdenTrabajo nuevaOrden = ordenService.crearOrden(request);
+        return ResponseEntity.ok(nuevaOrden);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<OrdenTrabajo> actualizarOrden(@PathVariable Long id, @RequestBody NuevaOrdenRequest request) {
-        try {
-            OrdenTrabajo ordenActualizada = ordenService.actualizarOrdenCompleta(id, request);
-            return ResponseEntity.ok(ordenActualizada);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().build();
-        }
+    public ResponseEntity<OrdenTrabajo> actualizarOrden(@PathVariable Long id, @Valid @RequestBody ActualizarOrdenRequest request) {
+        OrdenTrabajo ordenActualizada = ordenService.actualizarOrdenCompleta(id, request);
+        return ResponseEntity.ok(ordenActualizada);
     }
 
     @GetMapping
@@ -70,6 +52,12 @@ public class OrdenTrabajoController {
         Page<OrdenTrabajo> ordenesPage = ordenService.obtenerTodas(pageable);
         
         return ResponseEntity.ok(ordenesPage);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<OrdenTrabajo> obtenerPorId(@PathVariable Long id) {
+        OrdenTrabajo orden = ordenService.obtenerPorId(id);
+        return ResponseEntity.ok(orden);
     }
 
     @GetMapping("/vehiculo/{id}")
@@ -94,7 +82,7 @@ public class OrdenTrabajoController {
 
     @GetMapping("/{id}/pdf")
     public ResponseEntity<byte[]> descargarPdf(@PathVariable Long id) {
-        OrdenTrabajo orden = ordenTrabajoRepository.findById(id).orElseThrow(() -> new RuntimeException("Orden no encontrada"));
+        OrdenTrabajo orden = ordenService.obtenerPorId(id);
         
         byte[] pdfBytes = pdfService.generarOrdenPdf(orden);
         
@@ -106,5 +94,4 @@ public class OrdenTrabajoController {
                 .headers(headers)
                 .body(pdfBytes);
     }
-
 }

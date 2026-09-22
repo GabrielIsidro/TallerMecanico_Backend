@@ -1,5 +1,7 @@
 package com.taller.backend.core.security;
 
+import com.taller.backend.core.exception.ResourceNotFoundException;
+import com.taller.backend.core.exception.UnauthorizedAccessException;
 import com.taller.backend.modules.backoffice.model.Taller;
 import com.taller.backend.modules.talleres.model.Usuario;
 import com.taller.backend.modules.talleres.repository.UsuarioRepository;
@@ -20,10 +22,10 @@ public class SecurityHelper {
     public Taller getTallerAutenticado() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         Usuario usuario = usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario autenticado no encontrado en BD"));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario autenticado no encontrado: " + email));
 
         if (usuario.getTaller() == null) {
-            throw new RuntimeException("El usuario no tiene un taller asignado");
+            throw new UnauthorizedAccessException("El usuario autenticado no tiene un taller asignado");
         }
 
         return usuario.getTaller();

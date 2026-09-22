@@ -1,72 +1,81 @@
 <div align="center">
   <h1>🔧 TallerMecanico_Backend</h1>
-  <p><em>Sistema Integral de Gestión para Talleres Mecánicos</em></p>
+  <p><em>Sistema Integral Multi-Tenant de Gestión para Talleres Mecánicos (SaaS)</em></p>
 </div>
 
 ---
 
 ## 📖 Sobre el Proyecto
 
-El proyecto nace de una necesidad real: optimizar y digitalizar la administración de un taller mecánico familiar especializado en autos, camiones y camionetas. 
-Este backend provee una **API REST** robusta y segura que resuelve los problemas organizativos típicos de un taller en crecimiento, reemplazando la gestión manual o en papel por un sistema digital centralizado.
+El proyecto nace de una necesidad real: optimizar y digitalizar la administración integral de un taller mecánico familiar especializado en autos, camiones y utilitarios, escalable como plataforma **SaaS Multi-Tenant**.
+Este backend provee una **API REST** robusta, segura y versionada (`/api/v1/...`) con aislamiento estricto de datos por taller a nivel de base de datos (`TenantId`), reemplazando la gestión manual o en papel por un sistema centralizado de alto rendimiento.
 
 ---
 
 ## ⚙️ Características Principales
 
-- 🚗 **Gestión de Vehículos**: Registro detallado de unidades de diferente porte (autos, utilitarios, camiones).
-- 📜 **Historial de Reparaciones**: Seguimiento integral de los servicios realizados a cada vehículo, facilitando el mantenimiento preventivo.
-- 👥 **Administración de Clientes**: Base de datos de dueños y empresas.
-- 📋 **Control de Órdenes de Trabajo**: Trazabilidad del estado de las reparaciones (Pendiente, En Proceso, Terminado, Entregado).
-- 🔒 **Seguridad y Autenticación**: Sistema seguro basado en tokens JWT (JSON Web Tokens) y roles de usuario.
-- ✉️ **Notificaciones por Correo**: Integración con un servidor SMTP (Gmail) para enviar alertas y comunicaciones.
-- 📊 **Importación de Datos**: Soporte para la lectura de archivos CSV e ingesta inicial de información.
-- 💳 **Suscripciones y Pagos**: Integración con la pasarela de pagos Mercado Pago para gestionar planes de suscripción del modelo SaaS.
-- 🏢 **Multi-Taller (SaaS)**: Soporte para la administración de múltiples talleres mecánicos desde una misma plataforma centralizada.
+- 🏢 **Multi-Taller (SaaS Multi-Tenancy)**: Aislamiento completo de información entre talleres con Hibernate Discriminator (`@TenantId`) y validación de seguridad transversal en capa de servicios.
+- 🚗 **Gestión de Vehículos**: Registro de unidades (marca, modelo, patente, kilometraje, historial de mantenimientos).
+- 👥 **Administración de Clientes**: Gestión de particulares y cuentas corrientes de empresas (CUIT, razón social, contactos).
+- 📋 **Control Integral de Órdenes de Trabajo**: Trazabilidad completa del ciclo de reparación (Pendiente, En Proceso, Finalizado, Entregado), cálculo dinámico de costos y generación de comprobantes.
+- 🛠️ **Catálogo de Servicios y Repuestos**: Control de inventario de repuestos con alertas de stock mínimo y tarifario de mano de obra organizado por grupos.
+- 🔒 **Seguridad y Autenticación**: Tokens JWT (JSON Web Tokens) con separación estricta de roles (`SUPER_ADMIN`, `ADMIN_TALLER`, `MECANICO`).
+- ✉️ **Notificaciones Automatizadas por Correo**: Alertas inmediatas al cliente cuando su vehículo está listo para ser retirado y correos de bienvenida con credenciales para nuevos talleres.
+- 📊 **Importación Masiva de Datos**: Procesamiento de archivos `.csv` para actualización rápida de tarifas y precios de servicios.
+- 💳 **Suscripciones y Pagos (Mercado Pago)**: Integración con checkout y webhooks automáticos para gestión de planes mensuales y anuales (`BASE`, `PRO`).
+- 👔 **Backoffice SaaS**: Panel de control administrativo para supervisar talleres activos, estados de suscripción, extensiones de vigencia y bajas controladas.
 
 ---
 
 ## 🏗️ Arquitectura del Sistema
 
-El proyecto está diseñado bajo una **Arquitectura en Capas (Layered Architecture)**, asegurando la separación de responsabilidades, alta escalabilidad y facilidad de mantenimiento:
+El proyecto implementa una **Arquitectura en Capas y Módulos** orientada al dominio:
 
-1. **Controllers (`/controller`)**: Exponen los endpoints de la API REST y manejan las peticiones HTTP.
-2. **Services (`/service`)**: Contienen la lógica de negocio pura, reglas del taller y cálculos.
-3. **Repositories (`/repository`)**: Interfaces de Spring Data JPA para la persistencia y acceso a datos.
-4. **Models (`/model`)**: Entidades que mapean directamente las tablas en la base de datos (Ej: `Vehiculo`, `Cliente`, `OrdenTrabajo`).
-5. **DTOs (`/dto`)**: Objetos de Transferencia de Datos utilizados para desacoplar las entidades de la base de datos de las respuestas y peticiones de la API.
-6. **Security (`/security`)**: Filtros y utilidades para la autenticación y autorización mediante JWT.
+1. **Core (`com.taller.backend.core`)**:
+   - **`config`**: Configuración de seguridad, CORS, inicialización de datos de arranque (`DataInitializer`).
+   - **`security`**: Filtros JWT (`JwtRequestFilter`), `SecurityHelper` para resolución del taller autenticado, UserDetailsService.
+   - **`multitenancy`**: Contexto de hilo (`TenantContext`) y resolución de identificador de tenant para Hibernate.
+   - **`exception`**: Excepciones de dominio tipadas (`ResourceNotFoundException`, `UnauthorizedAccessException`, `BusinessRuleException`, `DuplicateResourceException`) gestionadas centralmente por `GlobalExceptionHandler`.
+   - **`service`**: Servicios transversales de correo (`EmailService`) y generación de documentos (`PdfService`).
+
+2. **Módulo Talleres (`com.taller.backend.modules.talleres`)**:
+   - Gestión operativa de cada taller: clientes, vehículos, órdenes de trabajo, inventario de repuestos, servicios y usuarios/mecánicos.
+   - Todos los servicios validan la pertenencia de las entidades al taller autenticado.
+
+3. **Módulo Backoffice (`com.taller.backend.modules.backoffice`)**:
+   - Operaciones exclusivas del SaaS: alta y administración de talleres (`TallerService`), planes (`PlanSuscripcion`), pagos y webhooks (`SuscripcionService`, `MercadoPagoService`).
 
 ---
 
 ## 🛠️ Tecnologías Utilizadas
 
 ### Core & Frameworks
-- **Java 17+**
-- **Spring Boot 4.0.3**
-- **Spring Data JPA** (Persistencia)
+- **Java 17 LTS**
+- **Spring Boot 3.4.3**
+- **Spring Data JPA** (Persistencia & ORM)
 - **Spring Web / WebMVC** (API REST)
-- **Spring Security** (Protección de endpoints)
+- **Spring Security 6** (Protección de endpoints y control de roles)
+- **Spring Boot Starter Validation** (Validación declarativa con Bean Validation)
 
 ### Herramientas de Apoyo
-- **Lombok**: Para reducir el código repetitivo (getters, setters, constructores).
-- **JJWT (io.jsonwebtoken)**: Para la generación y validación de tokens.
-- **OpenCSV**: Para el procesamiento de archivos `.csv`.
-- **JavaMail Sender**: Para el envío de correos electrónicos.
-- **MercadoPago SDK / API**: Para procesar pagos y gestionar suscripciones.
+- **Lombok**: Reducción de código boilerplate (getters, setters, builders).
+- **JJWT (io.jsonwebtoken 0.11.5)**: Firma y verificación segura de tokens JWT.
+- **OpenCSV**: Procesamiento y parseo masivo de archivos `.csv`.
+- **JavaMail Sender**: Envío de correos electrónicos transaccionales por SMTP.
+- **MercadoPago SDK**: Generación de preferencias de pago y pasarela de cobro.
+- **iText / OpenPDF**: Generación de presupuestos y comprobantes de trabajo en PDF.
 
 ### Base de Datos
-- **MySQL** 
-- **Hibernate** (ORM)
+- **MySQL 8+**
+- **Hibernate Multi-Tenancy** (`@TenantId`)
 
 ---
 
 ## 🚀 Instalación y Ejecución
 
 ### Prerrequisitos
-- **Java 17** (o superior) instalado en tu sistema.
-- **MySQL Server** en ejecución.
-- (Opcional) Un IDE como IntelliJ IDEA, Eclipse o VS Code.
+- **Java 17** (o superior) instalado en el sistema.
+- **MySQL Server 8+** en ejecución.
 
 ### Pasos para levantar el entorno local
 
@@ -77,60 +86,93 @@ El proyecto está diseñado bajo una **Arquitectura en Capas (Layered Architectu
    ```
 
 2. **Configurar la Base de Datos:**
-   Crea una base de datos en MySQL llamada `taller_db`:
+   Crea la base de datos en MySQL:
    ```sql
    CREATE DATABASE taller_db;
    ```
-   *Nota: Por defecto, Hibernate (configurado con `update`) creará todas las tablas automáticamente al iniciar la aplicación.*
+   *Nota: Hibernate (`ddl-auto=update`) inicializará las tablas y `DataInitializer` sembrará automáticamente el usuario SuperAdmin inicial y los planes de suscripción.*
 
-3. **Configurar Propiedades (Credenciales):**
-   Edita el archivo `src/main/resources/application.properties` con tu usuario y contraseña de MySQL, y tus credenciales de Gmail para el envío de correos.
-
-4. **Compilar e Instalar dependencias:**
-   Ejecuta el Wrapper de Maven (incluido en el proyecto):
+3. **Configurar Variables de Entorno:**
+   Copia la plantilla `.env.example` y configura tus credenciales locales:
    ```bash
-   # En Windows
-   .\mvnw.cmd clean install -DskipTests
+   cp .env.example .env
+   ```
+   O define las variables de entorno (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `JWT_SECRET`).
+
+4. **Compilar el Proyecto:**
+   ```bash
+   # En Linux / macOS
+   ./mvnw clean compile -DskipTests
    
-   # En Linux/Mac
-   ./mvnw clean install -DskipTests
+   # En Windows
+   .\mvnw.cmd clean compile -DskipTests
    ```
 
-5. **Ejecutar el Servidor:**
+5. **Iniciar la Aplicación:**
    ```bash
+   # En Linux / macOS
+   ./mvnw spring-boot:run
+   
    # En Windows
    .\mvnw.cmd spring-boot:run
-   
-   # En Linux/Mac
-   ./mvnw spring-boot:run
    ```
-   La API estará disponible en: `http://localhost:8080/`
+   El backend estará disponible en: `http://localhost:8080/`
 
 ---
 
-## 🔌 Endpoints Principales
+## 🔌 Endpoints de la API REST (`/api/v1`)
 
-Aquí se detallan algunos de los recursos clave de la API. Para acceder a la mayoría, es necesario adjuntar el token JWT en la cabecera `Authorization: Bearer <token>`.
+Todos los endpoints (excepto login y webhooks públicos) requieren la cabecera `Authorization: Bearer <token_jwt>`.
 
-| Método | Endpoint | Descripción |
-| :--- | :--- | :--- |
-| `POST` | `/api/auth/login` | Autenticar usuario y recibir JWT |
-| `GET` | `/api/clientes` | Listar todos los clientes registrados |
-| `POST` | `/api/vehiculos` | Registrar un nuevo auto, camión o utilitario |
-| `GET` | `/api/vehiculos/{id}/historial` | Obtener el historial de reparaciones de un vehículo |
-| `POST` | `/api/ordenes` | Crear una nueva orden de trabajo |
-| `PUT` | `/api/ordenes/{id}/estado` | Actualizar el estado de una orden |
+### Módulo Talleres (`/api/v1/talleres`)
+
+| Método | Endpoint | Rol Requerido | Descripción |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/auth/login` | Público | Autenticación de taller (ADMIN_TALLER / MECANICO) |
+| `GET` | `/usuarios/me` | Autenticado | Perfil del usuario y taller logueado |
+| `POST` | `/usuarios/actualizar-perfil` | Autenticado | Actualización de datos y cambio de contraseña |
+| `GET` | `/usuarios/equipo` | ADMIN_TALLER | Listado de mecánicos del taller |
+| `POST` | `/usuarios/equipo` | ADMIN_TALLER | Alta de nuevo mecánico para el equipo |
+| `GET` | `/clientes` | Autenticado | Listado paginado y búsqueda de clientes |
+| `POST` | `/clientes` | Autenticado | Registrar cliente para el taller |
+| `PUT` | `/clientes/{id}` | Autenticado | Actualizar cliente |
+| `DELETE` | `/clientes/{id}` | Autenticado | Eliminar cliente |
+| `GET` | `/vehiculos` | Autenticado | Listar vehículos del taller |
+| `POST` | `/vehiculos` | Autenticado | Registrar vehículo asignado al taller |
+| `PUT` | `/vehiculos/{id}` | Autenticado | Actualizar vehículo |
+| `DELETE` | `/vehiculos/{id}` | Autenticado | Eliminar vehículo |
+| `GET` | `/ordenes` | Autenticado | Listado de órdenes de trabajo del taller |
+| `POST` | `/ordenes` | Autenticado | Crear nueva orden de trabajo con ítems |
+| `PUT` | `/ordenes/{id}/estado` | Autenticado | Actualizar estado y notificar por email |
+| `GET` | `/repuestos` | Autenticado | Catálogo e inventario de repuestos |
+| `POST` | `/repuestos` | Autenticado | Registrar repuesto con stock mínimo |
+| `GET` | `/servicios` | Autenticado | Lista de tipos de servicios y precios |
+| `POST` | `/importar-precios/csv` | Autenticado | Carga masiva de servicios desde archivo CSV |
+
+### Módulo Backoffice SaaS (`/api/v1/backoffice`)
+
+| Método | Endpoint | Rol Requerido | Descripción |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/auth/login` | Público | Autenticación del SuperAdmin |
+| `GET` | `/admin/saas/me` | SUPER_ADMIN | Perfil del SuperAdmin logueado |
+| `GET` | `/admin/saas/talleres` | SUPER_ADMIN | Listar todos los talleres registrados |
+| `POST` | `/admin/saas/talleres` | SUPER_ADMIN | Alta de taller y su administrador |
+| `PUT` | `/admin/saas/talleres/{id}/suscripcion`| SUPER_ADMIN | Modificar suscripción o prorrogar vencimiento |
+| `DELETE` | `/admin/saas/talleres/{id}` | SUPER_ADMIN | Baja en cascada de taller y datos asociados |
+| `GET` | `/planes` | Público | Listar planes de suscripción disponibles |
+| `POST` | `/suscripciones/checkout` | ADMIN_TALLER | Generar preferencia de pago en Mercado Pago |
+| `POST` | `/suscripciones/webhook` | Público | Webhook de acreditación de suscripción |
 
 ---
 
 ## 👥 Contribución y Soporte
 
-Este es un proyecto personal con fines académicos y de implementación real.
-Si deseas sugerir mejoras, detectar errores o contribuir al desarrollo:
-1. Realiza un Fork del proyecto.
-2. Crea una rama para tu feature (`git checkout -b feature/NuevaFuncionalidad`).
-3. Haz un commit de tus cambios (`git commit -m 'Agrega nueva funcionalidad'`).
-4. Sube la rama (`git push origin feature/NuevaFuncionalidad`).
+Este es un proyecto con fines académicos y de implementación comercial SaaS.
+Para colaborar o reportar incidencias:
+1. Realiza un Fork del repositorio.
+2. Crea tu rama para la nueva característica (`git checkout -b feature/NuevaMejora`).
+3. Confirma tus cambios (`git commit -m 'feat: agrega nueva mejora'`).
+4. Sube la rama (`git push origin feature/NuevaMejora`).
 5. Abre un Pull Request.
 
 ---
