@@ -52,6 +52,11 @@ public class OrdenTrabajo extends AuditableEntity {
     @JsonIgnoreProperties("ordenes") 
     private Vehiculo vehiculo;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "mecanico_asignado_id")
+    @JsonIgnoreProperties({"password", "taller", "codigoRecuperacion", "codigoRecuperacionExpiracion"})
+    private Usuario mecanicoAsignado;
+
     @ToString.Exclude 
     @OneToMany(mappedBy = "orden", cascade = CascadeType.ALL, orphanRemoval = true) 
     @JsonIgnoreProperties("orden") 

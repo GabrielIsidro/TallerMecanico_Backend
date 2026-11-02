@@ -9,6 +9,7 @@ import com.taller.backend.modules.talleres.dto.NuevaOrdenRequest;
 import com.taller.backend.modules.talleres.model.*;
 import com.taller.backend.modules.talleres.repository.OrdenTrabajoRepository;
 import com.taller.backend.modules.talleres.repository.TipoServicioRepository;
+import com.taller.backend.modules.talleres.repository.UsuarioRepository;
 import com.taller.backend.modules.talleres.repository.VehiculoRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -37,6 +38,9 @@ class OrdenTrabajoServiceTest {
 
     @Mock
     private TipoServicioRepository tipoServicioRepository;
+
+    @Mock
+    private UsuarioRepository usuarioRepository;
 
     @Mock
     private EmailService emailService;
@@ -150,5 +154,27 @@ class OrdenTrabajoServiceTest {
         when(ordenRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> ordenService.obtenerPorId(999L));
+    }
+
+    @Test
+    @DisplayName("Debe asignar un mecánico a una orden de trabajo")
+    void debeAsignarMecanicoAOrden() {
+        Usuario mecanicoMock = new Usuario();
+        mecanicoMock.setId(77L);
+        mecanicoMock.setNombre("Carlos");
+        mecanicoMock.setRol(RolUsuario.MECANICO);
+        mecanicoMock.setTaller(tallerMock);
+
+        when(securityHelper.getTallerAutenticado()).thenReturn(tallerMock);
+        when(ordenRepository.findById(50L)).thenReturn(Optional.of(ordenMock));
+        when(usuarioRepository.findById(77L)).thenReturn(Optional.of(mecanicoMock));
+        when(ordenRepository.save(any(OrdenTrabajo.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        OrdenTrabajo asignada = ordenService.asignarMecanico(50L, 77L);
+
+        assertNotNull(asignada);
+        assertNotNull(asignada.getMecanicoAsignado());
+        assertEquals(77L, asignada.getMecanicoAsignado().getId());
+        assertEquals("Carlos", asignada.getMecanicoAsignado().getNombre());
     }
 }

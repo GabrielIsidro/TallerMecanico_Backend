@@ -1,9 +1,13 @@
 package com.taller.backend.modules.talleres.controller;
 
+import com.taller.backend.modules.talleres.dto.AjusteStockRequest;
+import com.taller.backend.modules.talleres.dto.InventarioKpisDTO;
+import com.taller.backend.modules.talleres.dto.MovimientoStockDTO;
 import com.taller.backend.modules.talleres.model.Repuesto;
 import com.taller.backend.modules.talleres.service.RepuestoService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -11,6 +15,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/talleres/repuestos")
@@ -26,19 +32,52 @@ public class RepuestoController {
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size,
             @RequestParam(defaultValue = "") String search,
-            @RequestParam(required = false) Boolean bajoStock) {
+            @RequestParam(required = false) String categoria,
+            @RequestParam(required = false) Boolean bajoStock,
+            @RequestParam(required = false) Boolean agotados) {
         if (page != null) {
-            int pageSize = size != null ? size : 10;
+            int pageSize = size != null ? size : 15;
             Pageable pageable = PageRequest.of(page, pageSize, Sort.by("id").descending());
-            return ResponseEntity.ok(repuestoService.obtenerRepuestosPaginados(pageable, search, bajoStock));
+            return ResponseEntity.ok(repuestoService.obtenerRepuestosPaginados(pageable, search, categoria, bajoStock, agotados));
         }
         return ResponseEntity.ok(repuestoService.listarRepuestos());
+    }
+
+    @GetMapping("/kpis")
+    @PreAuthorize("hasAnyRole('ADMIN_TALLER', 'MECANICO')")
+    public ResponseEntity<InventarioKpisDTO> obtenerKpis() {
+        return ResponseEntity.ok(repuestoService.obtenerKpisInventario());
+    }
+
+    @GetMapping("/categorias")
+    @PreAuthorize("hasAnyRole('ADMIN_TALLER', 'MECANICO')")
+    public ResponseEntity<List<String>> obtenerCategorias() {
+        return ResponseEntity.ok(repuestoService.obtenerCategorias());
+    }
+
+    @GetMapping("/movimientos")
+    @PreAuthorize("hasAnyRole('ADMIN_TALLER', 'MECANICO')")
+    public ResponseEntity<Page<MovimientoStockDTO>> obtenerMovimientosTaller(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "15") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("fecha").descending());
+        return ResponseEntity.ok(repuestoService.obtenerMovimientosTaller(pageable));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN_TALLER', 'MECANICO')")
     public ResponseEntity<Repuesto> obtenerRepuestoPorId(@PathVariable Long id) {
         return ResponseEntity.ok(repuestoService.obtenerPorId(id));
+    }
+
+    @GetMapping("/{id}/movimientos")
+    @PreAuthorize("hasAnyRole('ADMIN_TALLER', 'MECANICO')")
+    public ResponseEntity<Page<MovimientoStockDTO>> obtenerMovimientosRepuesto(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "15") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("fecha").descending());
+        return ResponseEntity.ok(repuestoService.obtenerMovimientosRepuesto(id, pageable));
     }
 
     @PostMapping
@@ -52,6 +91,21 @@ public class RepuestoController {
     @PreAuthorize("hasRole('ADMIN_TALLER')")
     public ResponseEntity<Repuesto> actualizarRepuesto(@PathVariable Long id, @Valid @RequestBody Repuesto detalles) {
         Repuesto actualizado = repuestoService.actualizarRepuesto(id, detalles);
+        return ResponseEntity.ok(actualizado);
+    }
+
+    @PostMapping("/{id}/movimiento")
+    @PreAuthorize("hasAnyRole('ADMIN_TALLER', 'MECANICO')")
+    public ResponseEntity<Repuesto> registrarAjusteStock(
+            @PathVariable Long id,
+            @Valid @RequestBody AjusteStockRequest request) {
+        Repuesto actualizado = repuestoService.ajustarStock(
+                id,
+                request.getTipo(),
+                request.getCantidad(),
+                request.getMotivo(),
+                null
+        );
         return ResponseEntity.ok(actualizado);
     }
 

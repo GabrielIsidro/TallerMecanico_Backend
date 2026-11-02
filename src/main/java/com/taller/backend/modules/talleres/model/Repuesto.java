@@ -31,6 +31,17 @@ public class Repuesto extends AuditableEntity {
     @Column(nullable = true)
     private String sku;
 
+    private String marca;
+
+    private String categoria;
+
+    private String ubicacion;
+
+    @DecimalMin(value = "0.0", message = "El precio de costo no puede ser negativo")
+    private BigDecimal precioCosto;
+
+    private String proveedor;
+
     @NotNull(message = "La cantidad es obligatoria")
     @Min(value = 0, message = "La cantidad no puede ser negativa")
     @Column(nullable = false)

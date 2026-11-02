@@ -21,7 +21,11 @@ public class NuevaOrdenRequest {
     private String observacionesCliente;
     private String checklist;
     private Integer kilometraje;
+    private Long mecanicoAsignadoId;
 
     @Valid
     private List<ItemOrden> items;
+
+    @Valid
+    private List<RepuestoOrdenRequest> repuestos;
 }

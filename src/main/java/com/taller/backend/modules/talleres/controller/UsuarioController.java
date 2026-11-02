@@ -7,9 +7,13 @@ import com.taller.backend.core.exception.UnauthorizedAccessException;
 import com.taller.backend.core.security.SecurityHelper;
 import com.taller.backend.modules.backoffice.model.Taller;
 import com.taller.backend.modules.talleres.dto.ActualizarPerfilRequest;
+import com.taller.backend.modules.talleres.dto.MecanicoProductividadDTO;
 import com.taller.backend.modules.talleres.dto.UsuarioResponseDTO;
+import com.taller.backend.modules.talleres.model.EstadoOrden;
+import com.taller.backend.modules.talleres.model.OrdenTrabajo;
 import com.taller.backend.modules.talleres.model.RolUsuario;
 import com.taller.backend.modules.talleres.model.Usuario;
+import com.taller.backend.modules.talleres.repository.OrdenTrabajoRepository;
 import com.taller.backend.modules.talleres.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +44,9 @@ public class UsuarioController {
 
     @Autowired
     private SecurityHelper securityHelper;
+
+    @Autowired
+    private OrdenTrabajoRepository ordenTrabajoRepository;
 
     @GetMapping("/me")
     @Transactional(readOnly = true)
@@ -88,7 +97,7 @@ public class UsuarioController {
     }
 
     @GetMapping("/equipo")
-    @PreAuthorize("hasRole('ADMIN_TALLER')")
+    @PreAuthorize("hasAnyRole('ADMIN_TALLER', 'MECANICO')")
     public ResponseEntity<List<UsuarioResponseDTO>> listarEquipo() {
         Taller taller = securityHelper.getTallerAutenticado();
         List<Usuario> equipo = usuarioRepository.findByTallerIdAndRol(taller.getId(), RolUsuario.MECANICO);
@@ -100,6 +109,80 @@ public class UsuarioController {
             )).collect(Collectors.toList());
             
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/equipo/productividad")
+    @PreAuthorize("hasRole('ADMIN_TALLER')")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<MecanicoProductividadDTO>> obtenerProductividadEquipo() {
+        Taller taller = securityHelper.getTallerAutenticado();
+        List<Usuario> equipo = usuarioRepository.findByTallerIdAndRol(taller.getId(), RolUsuario.MECANICO);
+        List<OrdenTrabajo> todasLasOrdenes = ordenTrabajoRepository.findByTaller(taller);
+
+        LocalDate hoy = LocalDate.now();
+
+        List<MecanicoProductividadDTO> resultado = new ArrayList<>();
+
+        for (Usuario m : equipo) {
+            List<OrdenTrabajo> ordenesMecanico = todasLasOrdenes.stream()
+                    .filter(o -> o.getMecanicoAsignado() != null && o.getMecanicoAsignado().getId().equals(m.getId()))
+                    .collect(Collectors.toList());
+
+            List<MecanicoProductividadDTO.OrdenActivaMecanicoDTO> ordenesActivas = new ArrayList<>();
+            int enCurso = 0;
+            int finalizadosHoy = 0;
+            int entregadosHoy = 0;
+            int totalHistorico = 0;
+
+            for (OrdenTrabajo o : ordenesMecanico) {
+                boolean esActiva = o.getEstado() == EstadoOrden.PENDIENTE
+                        || o.getEstado() == EstadoOrden.PRESUPUESTADO
+                        || o.getEstado() == EstadoOrden.APROBADO
+                        || o.getEstado() == EstadoOrden.EN_REPARACION;
+
+                if (esActiva) {
+                    enCurso++;
+                    ordenesActivas.add(MecanicoProductividadDTO.OrdenActivaMecanicoDTO.builder()
+                            .ordenId(o.getId())
+                            .patente(o.getVehiculo() != null ? o.getVehiculo().getPatente() : "-")
+                            .marca(o.getVehiculo() != null ? o.getVehiculo().getMarca() : "")
+                            .modelo(o.getVehiculo() != null ? o.getVehiculo().getModelo() : "")
+                            .clienteNombre(o.getVehiculo() != null && o.getVehiculo().getCliente() != null ? o.getVehiculo().getCliente().getNombreCliente() : "Sin dueño")
+                            .estado(o.getEstado().name())
+                            .descripcion(o.getDescripcion())
+                            .build());
+                }
+
+                LocalDate fechaAccion = o.getFechaActualizacion() != null 
+                        ? o.getFechaActualizacion().toLocalDate() 
+                        : (o.getFechaIngreso() != null ? o.getFechaIngreso().toLocalDate() : null);
+
+                if (o.getEstado() == EstadoOrden.FINALIZADO || o.getEstado() == EstadoOrden.ENTREGADO) {
+                    totalHistorico++;
+                    if (hoy.equals(fechaAccion)) {
+                        if (o.getEstado() == EstadoOrden.FINALIZADO) {
+                            finalizadosHoy++;
+                        } else if (o.getEstado() == EstadoOrden.ENTREGADO) {
+                            entregadosHoy++;
+                        }
+                    }
+                }
+            }
+
+            resultado.add(MecanicoProductividadDTO.builder()
+                    .id(m.getId())
+                    .nombre(m.getNombre())
+                    .apellido(m.getApellido())
+                    .email(m.getEmail())
+                    .ordenesEnCurso(enCurso)
+                    .finalizadosHoy(finalizadosHoy)
+                    .entregadosHoy(entregadosHoy)
+                    .totalHistoricoFinalizados(totalHistorico)
+                    .ordenesActivas(ordenesActivas)
+                    .build());
+        }
+
+        return ResponseEntity.ok(resultado);
     }
 
     @PostMapping("/equipo")
@@ -123,6 +206,10 @@ public class UsuarioController {
 
         Taller taller = securityHelper.getTallerAutenticado();
 
+        if (taller.getTipoPlan() != com.taller.backend.modules.backoffice.model.TipoPlan.PRO) {
+            throw new BusinessRuleException("La gestión de mecánicos y equipo de trabajo es una función exclusiva del Plan PRO. Mejorá tu suscripción para sumar colaboradores.");
+        }
+
         Usuario mecanico = new Usuario();
         mecanico.setEmail(email.trim());
         mecanico.setNombre(nombre);
@@ -130,6 +217,7 @@ public class UsuarioController {
         mecanico.setPassword(passwordEncoder.encode(password.trim()));
         mecanico.setRol(RolUsuario.MECANICO);
         mecanico.setTaller(taller);
+        mecanico.setTallerId(taller.getId());
 
         usuarioRepository.save(mecanico);
 

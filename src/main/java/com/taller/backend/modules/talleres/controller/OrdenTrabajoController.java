@@ -80,6 +80,11 @@ public class OrdenTrabajoController {
         return ordenService.actualizarPago(id, formaPago);
     }
 
+    @PatchMapping("/{id}/asignar")
+    public OrdenTrabajo asignarMecanico(@PathVariable Long id, @RequestParam(required = false) Long mecanicoId) {
+        return ordenService.asignarMecanico(id, mecanicoId);
+    }
+
     @GetMapping("/{id}/pdf")
     public ResponseEntity<byte[]> descargarPdf(@PathVariable Long id) {
         OrdenTrabajo orden = ordenService.obtenerPorId(id);

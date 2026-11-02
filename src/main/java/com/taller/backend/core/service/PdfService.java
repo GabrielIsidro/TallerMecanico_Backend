@@ -81,9 +81,11 @@ public class PdfService {
                 document.add(space);
             }
 
-            // Table of items
-            if (orden.getItems() != null && !orden.getItems().isEmpty()) {
-                document.add(new Paragraph("Servicios y Repuestos:", fontSubtitle));
+            boolean hasItems = orden.getItems() != null && !orden.getItems().isEmpty();
+            boolean hasRepuestos = orden.getRepuestos() != null && !orden.getRepuestos().isEmpty();
+
+            if (hasItems || hasRepuestos) {
+                document.add(new Paragraph("Detalle de Trabajos y Repuestos:", fontSubtitle));
                 document.add(new Paragraph(" ", fontNormal));
 
                 PdfPTable table = new PdfPTable(4);
@@ -97,15 +99,32 @@ public class PdfService {
                     table.addCell(cell);
                 }
 
-                for (ItemOrden item : orden.getItems()) {
-                    String desc = item.getTipoServicio() != null ? item.getTipoServicio().getDescripcion() : "Servicio";
-                    double unitPrice = item.getSubtotal() != null && item.getCantidad() != null && item.getCantidad() > 0 ? item.getSubtotal() / item.getCantidad() : 0.0;
-                    
-                    table.addCell(new Paragraph(desc, fontNormal));
-                    table.addCell(new Paragraph(String.valueOf(item.getCantidad()), fontNormal));
-                    table.addCell(new Paragraph("$" + String.format("%.2f", unitPrice), fontNormal));
-                    table.addCell(new Paragraph("$" + (item.getSubtotal() != null ? item.getSubtotal() : "0.0"), fontNormal));
+                if (hasItems) {
+                    for (ItemOrden item : orden.getItems()) {
+                        String desc = item.getTipoServicio() != null ? item.getTipoServicio().getDescripcion() : "Servicio";
+                        double unitPrice = item.getSubtotal() != null && item.getCantidad() != null && item.getCantidad() > 0 ? item.getSubtotal() / item.getCantidad() : 0.0;
+
+                        table.addCell(new Paragraph(desc, fontNormal));
+                        table.addCell(new Paragraph(String.valueOf(item.getCantidad()), fontNormal));
+                        table.addCell(new Paragraph("$" + String.format("%.2f", unitPrice), fontNormal));
+                        table.addCell(new Paragraph("$" + String.format("%.2f", item.getSubtotal() != null ? item.getSubtotal() : 0.0), fontNormal));
+                    }
                 }
+
+                if (hasRepuestos) {
+                    for (com.taller.backend.modules.talleres.model.RepuestoOrden rep : orden.getRepuestos()) {
+                        String desc = "Repuesto: " + (rep.getDescripcion() != null ? rep.getDescripcion() : "Sin descripción");
+                        int cant = rep.getCantidad() != null ? rep.getCantidad() : 1;
+                        double subtotal = rep.getPrecioCobrado() != null ? rep.getPrecioCobrado() : 0.0;
+                        double unitPrice = rep.getPrecioUnitario() != null ? rep.getPrecioUnitario() : (subtotal / cant);
+
+                        table.addCell(new Paragraph(desc, fontNormal));
+                        table.addCell(new Paragraph(String.valueOf(cant), fontNormal));
+                        table.addCell(new Paragraph("$" + String.format("%.2f", unitPrice), fontNormal));
+                        table.addCell(new Paragraph("$" + String.format("%.2f", subtotal), fontNormal));
+                    }
+                }
+
                 document.add(table);
             }
 
