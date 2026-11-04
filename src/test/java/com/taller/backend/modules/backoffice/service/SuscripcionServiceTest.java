@@ -130,4 +130,141 @@ class SuscripcionServiceTest {
         assertTrue(resultado);
         verify(mercadoPagoService).validarFirmaWebhook("sig", "req-1", "123");
     }
+
+    @Test
+    @DisplayName("No debe acumular días anteriores al cambiar de plan (Upgrade o cambio de tipo)")
+    void noDebeAcumularDiasAlCambiarDePlan() {
+        // Taller tenía un plan BASE activo con 20 días por delante
+        taller.setTipoPlan(TipoPlan.BASE);
+        taller.setEstadoSuscripcion(EstadoSuscripcion.ACTIVA);
+        taller.setFechaVencimiento(LocalDate.now().plusDays(20));
+
+        when(planRepository.findById(10L)).thenReturn(Optional.of(planMensual)); // Plan PRO Mensual
+        when(tallerRepository.findById(1L)).thenReturn(Optional.of(taller));
+
+        suscripcionService.actualizarSuscripcionTaller(1L, 10L);
+
+        // El nuevo plan PRO debe comenzar desde HOY (+30 días), NO desde hoy + 20 + 30
+        assertEquals(TipoPlan.PRO, taller.getTipoPlan());
+        assertEquals(LocalDate.now().plusDays(30), taller.getFechaVencimiento());
+        verify(tallerRepository).save(taller);
+    }
+
+    @Test
+    @DisplayName("Debe acumular días si es renovación del MISMO plan activo")
+    void debeAcumularDiasSiEsRenovacionMismoPlan() {
+        // Taller tiene Plan PRO activo con 5 días restantes
+        taller.setTipoPlan(TipoPlan.PRO);
+        taller.setEstadoSuscripcion(EstadoSuscripcion.ACTIVA);
+        LocalDate vencimientoOriginal = LocalDate.now().plusDays(5);
+        taller.setFechaVencimiento(vencimientoOriginal);
+
+        when(planRepository.findById(10L)).thenReturn(Optional.of(planMensual)); // Plan PRO Mensual
+        when(tallerRepository.findById(1L)).thenReturn(Optional.of(taller));
+
+        suscripcionService.actualizarSuscripcionTaller(1L, 10L);
+
+        // Al renovar el mismo plan, se extiende desde su vencimiento original (+30 días)
+        assertEquals(TipoPlan.PRO, taller.getTipoPlan());
+        assertEquals(vencimientoOriginal.plusDays(30), taller.getFechaVencimiento());
+        verify(tallerRepository).save(taller);
+    }
+
+    @Test
+    @DisplayName("Debe lanzar excepción al generar checkout si ya tiene el mismo plan activo con más de 7 días")
+    void debeLanzarExcepcionSiIntentaRenovarMismoPlanConMasDeSieteDias() {
+        taller.setTipoPlan(TipoPlan.PRO);
+        taller.setEstadoSuscripcion(EstadoSuscripcion.ACTIVA);
+        taller.setFechaVencimiento(LocalDate.now().plusDays(15)); // Le quedan 15 días
+
+        when(planRepository.findById(10L)).thenReturn(Optional.of(planMensual));
+        when(usuarioRepository.findByEmail("admin@tallertest.com")).thenReturn(Optional.of(usuario));
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () ->
+                suscripcionService.generarCheckoutUrl(10L, "admin@tallertest.com")
+        );
+
+        assertTrue(ex.getMessage().contains("ya se encuentra activo"));
+        verify(mercadoPagoService, never()).crearPreferenciaPago(any(), any());
+    }
+
+    @Test
+    @DisplayName("Debe confirmar pago exitosamente y activar plan")
+    void debeConfirmarPagoExitosamente() {
+        when(mercadoPagoService.tieneAccessToken()).thenReturn(true);
+        Map<String, Object> pagoData = new HashMap<>();
+        pagoData.put("status", "approved");
+        pagoData.put("external_reference", "taller_1_plan_10");
+        when(mercadoPagoService.consultarPago("186602777629")).thenReturn(pagoData);
+        when(usuarioRepository.findByEmail("admin@tallertest.com")).thenReturn(Optional.of(usuario));
+        when(planRepository.findById(10L)).thenReturn(Optional.of(planMensual));
+        when(tallerRepository.findById(1L)).thenReturn(Optional.of(taller));
+
+        Taller resultado = suscripcionService.confirmarPago("186602777629", "admin@tallertest.com");
+
+        assertNotNull(resultado);
+        assertEquals(TipoPlan.PRO, resultado.getTipoPlan());
+        assertEquals(EstadoSuscripcion.ACTIVA, resultado.getEstadoSuscripcion());
+        verify(tallerRepository).save(taller);
+    }
+
+    @Test
+    @DisplayName("Debe lanzar excepción si el pago no está aprobado")
+    void debeLanzarExcepcionSiPagoNoAprobado() {
+        when(mercadoPagoService.tieneAccessToken()).thenReturn(true);
+        Map<String, Object> pagoData = new HashMap<>();
+        pagoData.put("status", "pending");
+        pagoData.put("status_detail", "pending_contingency");
+        when(mercadoPagoService.consultarPago("12345")).thenReturn(pagoData);
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () ->
+                suscripcionService.confirmarPago("12345", "admin@tallertest.com")
+        );
+
+        assertTrue(ex.getMessage().contains("no se encuentra aprobado"));
+    }
+
+    @Test
+    @DisplayName("Debe programar cancelación de suscripción activa sin suspender de inmediato")
+    void debeProgramarCancelacionExitosamenteSinSuspenderDeInmediato() {
+        taller.setEstadoSuscripcion(EstadoSuscripcion.ACTIVA);
+        LocalDate vencimientoOriginal = LocalDate.now().plusDays(25);
+        taller.setFechaVencimiento(vencimientoOriginal);
+        when(usuarioRepository.findByEmail("admin@tallertest.com")).thenReturn(Optional.of(usuario));
+
+        suscripcionService.cancelarSuscripcion("admin@tallertest.com");
+
+        // Mantiene el estado ACTIVO y la fecha de vencimiento original
+        assertEquals(EstadoSuscripcion.ACTIVA, taller.getEstadoSuscripcion());
+        assertEquals(vencimientoOriginal, taller.getFechaVencimiento());
+        assertTrue(taller.getCancelacionProgramada());
+        verify(tallerRepository).save(taller);
+    }
+
+    @Test
+    @DisplayName("Debe reactivar suscripción con cancelación programada")
+    void debeReactivarSuscripcionConCancelacionProgramada() {
+        taller.setEstadoSuscripcion(EstadoSuscripcion.ACTIVA);
+        taller.setCancelacionProgramada(true);
+        when(usuarioRepository.findByEmail("admin@tallertest.com")).thenReturn(Optional.of(usuario));
+
+        suscripcionService.reactivarSuscripcion("admin@tallertest.com");
+
+        assertFalse(taller.getCancelacionProgramada());
+        verify(tallerRepository).save(taller);
+    }
+
+    @Test
+    @DisplayName("Debe lanzar excepción si se intenta cancelar una suscripción ya suspendida")
+    void debeLanzarExcepcionSiSuscripcionYaSuspendida() {
+        taller.setEstadoSuscripcion(EstadoSuscripcion.SUSPENDIDA);
+        when(usuarioRepository.findByEmail("admin@tallertest.com")).thenReturn(Optional.of(usuario));
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () ->
+                suscripcionService.cancelarSuscripcion("admin@tallertest.com")
+        );
+
+        assertTrue(ex.getMessage().contains("ya se encuentra suspendida"));
+        verify(tallerRepository, never()).save(taller);
+    }
 }

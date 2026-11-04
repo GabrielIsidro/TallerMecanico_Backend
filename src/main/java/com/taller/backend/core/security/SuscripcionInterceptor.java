@@ -28,8 +28,8 @@ public class SuscripcionInterceptor implements HandlerInterceptor {
 
         String uri = request.getRequestURI();
 
-        // Excluir endpoints públicos o de consulta del propio usuario / auth
-        if (uri.contains("/talleres/auth") || uri.endsWith("/usuarios/me")) {
+        // Excluir endpoints públicos, de suscripciones/pagos o de consulta del propio usuario / auth
+        if (uri.contains("/talleres/auth") || uri.contains("/backoffice/suscripciones") || uri.contains("/backoffice/planes") || uri.endsWith("/usuarios/me")) {
             return true;
         }
 

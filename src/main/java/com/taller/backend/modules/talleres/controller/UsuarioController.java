@@ -68,6 +68,7 @@ public class UsuarioController {
                 usuario.getTaller() != null ? usuario.getTaller().getFechaVencimiento() : null
         );
         response.setDebeCambiarPassword(Boolean.TRUE.equals(usuario.getDebeCambiarPassword()));
+        response.setCancelacionProgramada(usuario.getTaller() != null && Boolean.TRUE.equals(usuario.getTaller().getCancelacionProgramada()));
 
         return ResponseEntity.ok(response);
     }

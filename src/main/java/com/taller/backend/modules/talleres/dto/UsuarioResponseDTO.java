@@ -22,6 +22,7 @@ public class UsuarioResponseDTO {
     private com.taller.backend.modules.backoffice.model.TipoPlan tipoPlan;
     private LocalDate fechaVencimiento;
     private Boolean debeCambiarPassword = false;
+    private Boolean cancelacionProgramada = false;
 
     public UsuarioResponseDTO(Long id, String email, String nombre, String apellido, RolUsuario rol,
                               Long tallerId, String tallerNombre, EstadoSuscripcion estadoSuscripcion,

@@ -47,7 +47,7 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers("/api/v1/backoffice/suscripciones/webhook").permitAll()
                         .requestMatchers("/api/v1/backoffice/planes").permitAll()
-                        .requestMatchers("/api/v1/backoffice/suscripciones/checkout")
+                        .requestMatchers("/api/v1/backoffice/suscripciones/**")
                         .hasAnyRole("ADMIN_TALLER", "SUPER_ADMIN")
                         .requestMatchers("/api/v1/backoffice/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/v1/talleres/**").hasAnyRole("MECANICO", "ADMIN_TALLER")

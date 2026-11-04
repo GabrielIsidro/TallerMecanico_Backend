@@ -29,4 +29,7 @@ public class Taller {
     private TipoPlan tipoPlan = TipoPlan.BASE;
 
     private LocalDate fechaVencimiento;
+
+    @Column(name = "cancelacion_programada")
+    private Boolean cancelacionProgramada = false;
 }

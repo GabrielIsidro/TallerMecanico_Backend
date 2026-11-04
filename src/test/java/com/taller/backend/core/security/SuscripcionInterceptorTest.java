@@ -121,4 +121,20 @@ class SuscripcionInterceptorTest {
                 interceptor.preHandle(request, response, new Object())
         );
     }
+
+    @Test
+    void testSuspendidaPermiteAccesoASuscripcionesParaPagar() throws Exception {
+        when(request.getRequestURI()).thenReturn("/api/v1/backoffice/suscripciones/checkout");
+
+        boolean result = interceptor.preHandle(request, response, new Object());
+        assertTrue(result, "Un taller suspendido DEBE poder acceder al checkout para renovar o reactivar");
+    }
+
+    @Test
+    void testVencidaPermiteAccesoAPlanes() throws Exception {
+        when(request.getRequestURI()).thenReturn("/api/v1/backoffice/planes");
+
+        boolean result = interceptor.preHandle(request, response, new Object());
+        assertTrue(result, "Un taller vencido DEBE poder consultar los planes de suscripción");
+    }
 }

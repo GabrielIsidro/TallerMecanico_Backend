@@ -52,6 +52,18 @@ public class SaaSAdminController {
         return tallerService.listarTalleres();
     }
 
+    @GetMapping("/metricas")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<Map<String, Object>> obtenerMetricasGlobales() {
+        return ResponseEntity.ok(tallerService.obtenerMetricasGlobales());
+    }
+
+    @GetMapping("/talleres/{id}/monitoreo")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<Map<String, Object>> obtenerMonitoreoTaller(@PathVariable Long id) {
+        return ResponseEntity.ok(tallerService.obtenerMonitoreoTaller(id));
+    }
+
     @PostMapping("/talleres")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<?> crearTaller(@RequestBody Map<String, String> request) {

@@ -45,10 +45,15 @@ public class SuscripcionCronJob {
                 System.out.println("Taller suspendido por falta de pago (+" + diasDiferencia + " días): " + taller.getNombre());
             } 
             else if (diasDiferencia > 0 && diasDiferencia <= 3 && taller.getEstadoSuscripcion() != EstadoSuscripcion.VENCIDA) {
-                // Está en periodo de gracia
-                taller.setEstadoSuscripcion(EstadoSuscripcion.VENCIDA);
+                if (Boolean.TRUE.equals(taller.getCancelacionProgramada())) {
+                    // Cancelación programada por el usuario: al vencer el período se suspende directamente
+                    taller.setEstadoSuscripcion(EstadoSuscripcion.SUSPENDIDA);
+                } else {
+                    // Período de gracia estándar
+                    taller.setEstadoSuscripcion(EstadoSuscripcion.VENCIDA);
+                }
                 tallerRepository.save(taller);
-                System.out.println("Taller marcado como vencido (en gracia): " + taller.getNombre());
+                System.out.println("Taller procesado por vencimiento: " + taller.getNombre());
             }
         }
     }
